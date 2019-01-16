@@ -1,0 +1,7 @@
+library(shiny)
+library(DRomics)
+library(ggplot2)
+library(shinyjs)
+library(shinyBS)
+addResourcePath('DRomicspkg', system.file("extdata", package="DRomics"))
+options(shiny.maxRequestSize=30*1024^2)
