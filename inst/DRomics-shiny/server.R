@@ -1,48 +1,58 @@
 server <- function(input, output, session) {
-
+  
+  
+  ####################################################################################
+  ####### STEP 1 #####################################################################
+  ####################################################################################
+  
+  inTypeData <- reactive({input$typeData})
+  
   ## Input: file data
   filedata <- reactive({
-    inFile <- NULL
-    inFile <- input$datafile
-    if(is.null(inFile)) {return(NULL)}
-    omicdata(inFile$datapath, check = TRUE, norm.method = input$normMethod)
+    
+    if(inTypeData() == 'microarraydata') {
+      req(input$datafile_microarray)
+      microarraydata(input$datafile_microarray$datapath, check = TRUE, norm.method = input$normMethod_microarray)
+    } else if(inTypeData() == 'rnaseqdata') {
+      req(input$datafile_rnaseq)
+      RNAseqdata(input$datafile_rnaseq$datapath, check = TRUE, transfo.method = input$transfoMethod_rnaseq)
+    } else if(inTypeData() == 'metabolomicdata') {
+      req(input$datafile_metabolomic)
+      metabolomicdata(input$datafile_metabolomic$datapath, check = TRUE)
+    }
   })
   
+  ## Output : print and plot omic data
   output$printOmicData <- renderPrint({ 
-    oo <<- filedata()
-    if (!is.null(oo)) {
-      print(oo)
-    }
+    print(filedata())
   })
   
-  output$plotOmicData <- renderPlot({ 
-    oo <<- filedata()
-    if (!is.null(oo)) {
-      plot(oo)
-    }
+  output$plotOmicData <- renderPlot({
+    plot(filedata())
   })
   
-  numFDR <- reactive({as.numeric(input$FDR)})
   
-  runitemselect <- reactive({
-    oo <- filedata()
-    if (!is.null(oo)) {
-      itemselect(oo, select.method = input$selectMethod, FDR = numFDR())
-    } else {
-      NULL
-    }
-  })
+  ####################################################################################
+  ####### STEP 2 #####################################################################
+  ####################################################################################
+  
+  inFDR <- reactive({as.numeric(input$FDR)})
+  inSelectMethod <- reactive({input$selectMethod})
   
   output$printItemSelect <- renderPrint({ 
-    ss <<- runitemselect()
-    oo <- filedata()
-    if (!is.null(oo) & !is.null(ss)) {
-      print(ss)
-    }
+    signifitems <<- itemselect(filedata(), select.method = inSelectMethod(), FDR = inFDR())
+    print(signifitems)
   })
   
+  
+  ####################################################################################
+  ####### STEP 3 #####################################################################
+  ####################################################################################
+  
   observe({
-    if (is.null(input$datafile)) {
+    if ((inTypeData() == 'microarraydata' & is.null(input$datafile_microarray)) |
+        (inTypeData() == 'rnaseqdata' & is.null(input$datafile_rnaseq)) |
+        (inTypeData() == 'metabolomicdata' & is.null(input$datafile_metabolomic))) {
       shinyjs::disable("buttonDrcfit")
     }else{
       shinyjs::enable("buttonDrcfit")
@@ -53,47 +63,43 @@ server <- function(input, output, session) {
   observe({shinyjs::disable("buttonPlotBmdcalc")})
   
   rundrcfit <- eventReactive(input$buttonDrcfit, {
-    drcfit(ss, progressbar = FALSE, sigmoid.model = "Hill", parallel = "no")
+    return(drcfit(signifitems, progressbar = FALSE, sigmoid.model = "Hill", parallel = "no"))
   })
+  
+  inPlottypeDrcfit <- reactive({input$plottypeDrcfit})
   
   output$plotDrcfit <- renderPlot({
+    mydrcfit <- rundrcfit()
+    plotdrcfit <- plot(mydrcfit, plot.type = inPlottypeDrcfit())
+    plot(plotdrcfit)
     
-    if(exists("ss") & !is.null(ss)){
-      observe(input$buttonDrcfit) # Re-run when button is clicked
-      n <- length(ss$selectindex)
-      withProgress(message = 'These ongoing calculations can take from minutes to about an hour.
-                   Your patience should be proportional to the size of your data and the chosen FDR.', 
-                   min = 1, max = 1, value = 1, {
-                     mydrcfit <- rundrcfit()
-                     plotdrcfit <- plot(mydrcfit)
-                     plot(plotdrcfit)
-                   })
-      
-      
-      
-      output$testdowload <- reactive({length(mydrcfit)})
-      outputOptions(output, "testdowload", suspendWhenHidden = FALSE)
-      
-      output$buttonDownloadDrcfitplot <- downloadHandler(
-        filename = function(){
-          "drcfitplot.pdf"
-        },
-        content = function(file) {
-          file.copy(paste0(tempdir(), "/drcfitplot.pdf"), file)
-        },
-        contentType = {"application/pdf"}
-      )
-      
-      output$printDrcfit <- renderPrint({
-        print(mydrcfit)
-      })
-    }
+    output$okfordowload <- reactive({length(mydrcfit)})
+    outputOptions(output, "okfordowload", suspendWhenHidden = FALSE)
+    
+    output$buttonDownloadDrcfitplot <- downloadHandler(
+      filename = function(){
+        "drcfitplot.pdf"
+      },
+      content = function(file) {
+        file.copy(paste0(tempdir(), "/drcfitplot.pdf"), file)
+      },
+      contentType = {"application/pdf"}
+    )
+    
+    output$printDrcfit <- renderPrint({
+      print(mydrcfit)
+    })
   })
   
+  
+  ####################################################################################
+  ####### STEP 4 #####################################################################
+  ####################################################################################
+  
+  numZbmdcalc <- reactive({as.numeric(input$zbmdcalc)})
+  numXbmdcalc <- reactive({as.numeric(input$xbmdcalc)})
+  
   output$printBmdcalc <- renderPrint({
-    
-    numZbmdcalc <- reactive({as.numeric(input$zbmdcalc)})
-    numXbmdcalc <- reactive({as.numeric(input$xbmdcalc)})
     
     input$buttonDrcfit
     mydrcfit <- rundrcfit()
@@ -110,7 +116,7 @@ server <- function(input, output, session) {
     output$plotBmdcalc <- renderPlot({
       plot(mybmdcalc, BMDtype = input$BMDtype, 
            plottype = input$plottype, 
-           bytypology = input$bytypology, 
+           by = input$splitby, 
            hist.bins = input$histbin)
     })
     
@@ -136,10 +142,112 @@ server <- function(input, output, session) {
       },
       content = function(file) {
         pdf(file, width = 8, height = 8)
-        print(plot(mybmdcalc, BMDtype = input$BMDtype, plottype = input$plottype, bytypology = input$bytypology))
+        print(plot(mybmdcalc, BMDtype = input$BMDtype, plottype = input$plottype, by = input$splitby))
         dev.off()
       },
       contentType = {"application/pdf"}
     )
   })
+  
+  
+  ####################################################################################
+  ####### R CODE #####################################################################
+  ####################################################################################
+
+  output$printRCode <- renderText({
+    # req(input$datafile)
+    
+    if(inTypeData() == 'microarraydata') {
+      req(input$datafile_microarray)
+    } else if(inTypeData() == 'rnaseqdata') {
+      req(input$datafile_rnaseq)
+    } else if(inTypeData() == 'metabolomicdata') {
+      req(input$datafile_metabolomic)
+    }
+    
+    text <- c("library(DRomics)",
+              "",
+              "# Step 1",
+              paste0("o <- ", ifelse(input$typeData == 'microarraydata', 
+                                     paste0("microarraydata('", input$datafile_microarray$name, "', check = TRUE, norm.method = '", input$normMethod_microarray, "')"), 
+                                     ifelse(input$typeData == 'rnaseqdata', 
+                                            paste0("RNAseqdata('", input$datafile_rnaseq$name, "', check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "')"), 
+                                            paste0("metabolomicdata('", input$datafile_metabolomic$name, "', check = TRUE)")))),
+              "print(o)",
+              "plot(o)",
+              "",
+              "# Step 2",
+              paste0("s <- itemselect(o, select.method = '", inSelectMethod(), "', FDR = ", inFDR(), ")"),
+              "print(s)",
+              "",
+              "# Step 3",
+              paste0("f <- drcfit(s, progressbar = FALSE, sigmoid.model = 'Hill', parallel = 'no')"),
+              "# This computation time can be reduced using parallel computing (see ?drcfit)",
+              "plot(f)",
+              "",
+              "# Step 4",
+              paste0("r <- bmdcalc(f, z = ", numZbmdcalc(), ", x = ", numXbmdcalc(), ")"),
+              paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", input$histbin, ")"))
+    
+    output$buttonDownRCode <- downloadHandler(
+      filename = function(){
+        paste0("Rcode-", Sys.Date(), ".R")
+      },
+      content = function(file) {
+        writeLines(paste(text, collapse = "\n"), file)
+      },
+      contentType = {"text/plain"}
+    )
+    
+    return(paste(text, collapse = "\n"))
+  })
+  
+  
+  output$printRCodeFurther <- renderText({
+    
+    if(inTypeData() == 'microarraydata') {
+      req(input$datafile_microarray)
+    } else if(inTypeData() == 'rnaseqdata') {
+      req(input$datafile_rnaseq)
+    } else if(inTypeData() == 'metabolomicdata') {
+      req(input$datafile_metabolomic)
+    }
+    
+    text <- c("# Few lines of R script to go further using the package",
+              "",
+              "# Plot of fitted curves",
+              "curvesplot(f$fitres, xmax = max(f$omicdata$dose), facetby = 'trend', colorby = 'model') + 
+  xlab('dose') + ylab('theoretical signal')",
+              "# The first argument can be an extended dataframe, which could be used to split",
+              "# the plot of color the curves (using facetby or colorby)",
+              "",
+              "# Bootstrap to compute confidence intervals on BMD estimations",
+              "# May take few hours !!!!!!!!!!!!!!!!!!!!!",
+              "# This computation time can be reduced using parallel computing",
+              "# (see ?bmdboot for corresponding code)",
+              "(b <- bmdboot(r, niter = 1000, progressbar = TRUE))",
+              "plot(b)",
+              "",
+              "# Representation of cumulative distribution of BMD values",
+              "# with their confidence 95% intervals",
+              "# Argument by and CI.col can be used with additional columns",
+              "# built from annotation of items for example",
+              "a <- b$res[is.finite(b$res$BMD.zSD.upper), ] # removing of CI with infinite bounds",
+              "ecdfplotwithCI(variable = a$BMD.zSD, CI.lower = a$BMD.zSD.lower, 
+  CI.upper = a$BMD.zSD.upper, by = a$model, CI.col = a$trend)"
+              )
+    
+    output$buttonDownRCodeFurther <- downloadHandler(
+      filename = function(){
+        paste0("moreRcode-", Sys.Date(), ".R")
+      },
+      content = function(file) {
+        writeLines(paste(text, collapse = "\n"), file)
+      },
+      contentType = {"text/plain"}
+    )
+    
+    return(paste(text, collapse = "\n"))
+  })
+  
 }

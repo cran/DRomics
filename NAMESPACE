@@ -3,15 +3,28 @@ import(stats)
 import(graphics)
 import(ggplot2)
 importFrom("limma", normalizeBetweenArrays, lmFit, eBayes, topTable)
+importFrom("DESeq2", rlog, vst, DESeq, results, DESeqDataSetFromMatrix)
 importFrom("utils", txtProgressBar, setTxtProgressBar, read.table)
 importFrom("grDevices", pdf, dev.off)
 
 ### Exports
 
-#omicdata class
-export(omicdata)
-S3method(print, omicdata)
-S3method(plot, omicdata)
+#microarraydata class
+export(microarraydata)
+export(omicdata) # deprecated function
+S3method(print, microarraydata)
+S3method(plot, microarraydata)
+
+#RNAseqdata class
+export(RNAseqdata)
+S3method(print, RNAseqdata)
+S3method(plot, RNAseqdata)
+
+#metabolomicdata class
+export(metabolomicdata)
+S3method(print, metabolomicdata)
+S3method(plot, metabolomicdata)
+
 
 #itemselect class
 export(itemselect)
@@ -26,3 +39,11 @@ S3method(plot, drcfit)
 export(bmdcalc)
 S3method(print, bmdcalc)
 S3method(plot, bmdcalc)
+
+#bmdboot class
+export(bmdboot)
+S3method(print, bmdboot)
+S3method(plot, bmdboot)
+
+export(ecdfplotwithCI)
+export(curvesplot)

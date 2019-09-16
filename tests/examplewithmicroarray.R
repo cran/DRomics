@@ -2,14 +2,14 @@ library(DRomics)
 # importation and check of data and normalization if needed
 # options to put in shiny : norm.method (4 methods)
 ## sample of the transcripto data set
-datatxt <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
-(o <- omicdata(datatxt, check = TRUE, norm.method = "cyclicloess"))
+datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+(o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess"))
 plot(o)
-(o.2 <- omicdata(datatxt, check = TRUE, norm.method = "none"))
+(o.2 <- microarraydata(datafilename, check = TRUE, norm.method = "none"))
 plot(o.2)
-(o.3 <- omicdata(datatxt, check = TRUE, norm.method = "quantile"))
+(o.3 <- microarraydata(datafilename, check = TRUE, norm.method = "quantile"))
 plot(o.3)
-(o.4 <- omicdata(datatxt, check = TRUE, norm.method = "scale"))
+(o.4 <- microarraydata(datafilename, check = TRUE, norm.method = "scale"))
 plot(o.4)
 
 # item selection using the quadratic method
@@ -37,13 +37,19 @@ plot(f, items = c("301.2", "363.1", "383.1"))
 
 
 # plot of BMD
-# options in shiny : BMDtype (2 possibilities), plottype (3 possibilities), bytypology (TRUE, FALSE)
+# options in shiny : BMDtype (2 possibilities), plottype (3 possibilities), by (3 possibilities)
 # hist.bins (integer for hist only)
-plot(r, BMDtype = "zSD", plottype = "ecdf", bytypology = FALSE) 
-plot(r, BMDtype = "xfold", plottype = "ecdf", bytypology = FALSE) 
+plot(r, BMDtype = "zSD", plottype = "ecdf", by = "none") 
+plot(r, BMDtype = "xfold", plottype = "ecdf", by = "none") 
 
-plot(r, plottype = "hist", bytypology = FALSE) 
-plot(r, plottype = "hist", bytypology = FALSE, hist.bins = 10) 
-plot(r, plottype = "density", bytypology = FALSE) 
+plot(r, plottype = "hist", by = "none") 
+plot(r, plottype = "hist", by = "none", hist.bins = 10) 
+plot(r, plottype = "density", by = "none") 
 
-plot(r, plottype = "hist", bytypology = TRUE, hist.bins = 10) 
+plot(r, plottype = "hist", by = "trend", hist.bins = 10) 
+plot(r, plottype = "hist", by = "model", hist.bins = 10) 
+plot(r, plottype = "hist", by = "typology", hist.bins = 10) 
+
+# Calculation of confidence intervals on BMDs by Bootstrap
+b <- bmdboot(r, niter = 100) # niter should be fixed at least at 1000 to get a reasonable precision
+plot(b) 

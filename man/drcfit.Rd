@@ -15,7 +15,8 @@ drcfit(itemselect, sigmoid.model = c("Hill", "log-probit"),
 
 \method{print}{drcfit}(x, \dots)
 
-\method{plot}{drcfit}(x, items, \dots)
+\method{plot}{drcfit}(x, items, 
+  plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), \dots)
 }
 
 \arguments{
@@ -42,6 +43,12 @@ choice) or \code{"log-probit"}.}
 \item{items}{Argument of the \code{plot.drcfit} function : the number of the first fits to
   plot (20 items max) or the character vector
   specifying the identifiers of the items to plot (20 items max).}
+  
+\item{plot.type}{the type of plot, by default \code{"dose_fitted"} for the plot of 
+ fitted curves with the observed points added to the plot and the observed means at each dose
+ added as black plain circles, \code{"dose_residuals"} for the plot of the residuals as function
+ of the dose, and \code{fitted_residuals} for the plot of the residuals as function of 
+ the fitted value.}
 
 \item{\dots}{ further arguments passed to graphical or print functions.}
 }
@@ -71,7 +78,7 @@ chosen model and of its parameter values :
   \item lGP.bell for bell-shape log-Gauss-probit curves.
  }
  
-Each retained is also classified in four classes by its global trend :
+Each retained item is also classified in four classes by its global trend :
   \itemize{
   \item inc for increasing curves,
   \item dec for decreasing curves ,
@@ -95,7 +102,7 @@ dose value at which their extremum is reached is at zero.
    and the corresponding y value (\code{yextrem}).
   }
 
-    \item{omicdata}{ The corresponding object of class \code{"omicdata"} given in input 
+    \item{omicdata}{ The corresponding object of class \code{"microarraydata"} given in input 
     (component of itemselect).}
  
     \item{n.failure}{ The number of previously selected items on which the workflow failed to 
@@ -120,28 +127,35 @@ Marie-Laure Delignette-Muller
 
 \examples{
 
-# (1) a toy example (a very small subsample of a transcriptomics data set) 
+# (1) a toy example (a very small subsample of a microarray data set) 
 #
-datatxt <- system.file("extdata", "transcripto_very_small_sample.txt", package="DRomics")
+datafilename <- system.file("extdata", "transcripto_very_small_sample.txt", package="DRomics")
 
 # to test the package on a small (for a quick calculation) but not very small data set
 # use the following commented line
-# datatxt <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+# datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
 
-(o <- omicdata(datatxt, check = TRUE, norm.method = "cyclicloess"))
+(o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess"))
 (s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.05))
 (f <- drcfit(s_quad, progressbar = TRUE))
 
 # Default plot
 plot(f)
 
+# Plot of residuals as function of the dose
+plot(f, plot.type = "dose_residuals")
 
-# (2) an example on a transcriptomics data set (a subsample of a greater data set) 
+\donttest{
+# plot of residuals as function of the fitted value
+plot(f, plot.type = "fitted_residuals")
+}
+
+# (2) an example on a microarray data set (a subsample of a greater data set) 
 #
 \donttest{
-datatxt <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
 
-(o <- omicdata(datatxt, check = TRUE, norm.method = "cyclicloess"))
+(o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess"))
 (s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.05))
 (f <- drcfit(s_quad, progressbar = TRUE))
 

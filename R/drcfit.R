@@ -435,7 +435,10 @@ drcfit <- function(itemselect, sigmoid.model = c("Hill", "log-probit"),
     
   # removing of null models (const, model no 7) and 
   # fits eliminated by the quadratic trend test on residuals
-  dres <- dres[(dres$model != 7) & (dres$trendP > 0.05), ]
+  dres <- dres[(dres$model != 7) & 
+                 ((dres$trendP > 0.05) | is.na(dres$trendP)) , ]
+  # is.na(trendP because anova of two models with very close RSS
+  # may return NA for pvalue)
   # update of nselect
   nselect <- nrow(dres)
   
@@ -644,7 +647,8 @@ print.drcfit <- function(x, ...)
   print(ttypology)
 }
 
-plot.drcfit <- function(x, items, ...)
+plot.drcfit <- function(x, items, 
+                plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), ...)
 {
   if (!inherits(x, "drcfit"))
     stop("Use only with 'drcfit' objects")
@@ -670,7 +674,8 @@ plot.drcfit <- function(x, items, ...)
                 dose = x$omicdata$dose, 
                 data = x$omicdata$data, 
                 data.mean = x$omicdata$data.mean, 
-                npts = 500) 
+                npts = 500,
+                plot.type = plot.type) 
   
 }
 

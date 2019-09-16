@@ -9,20 +9,28 @@ a quadratic trend test, a linear trend test or an ANOVA-based test.
 }
 
 \usage{
-itemselect(omicdata, select.method = c("quadratic", "linear", "ANOVA"), FDR = 0.05)   
+itemselect(omicdata, select.method = c("quadratic", "linear", "ANOVA"), 
+  FDR = 0.05, max.ties.prop = 0.2)   
 
 \method{print}{itemselect}(x, \dots)
 }
 
 \arguments{
-\item{omicdata}{An object of class \code{"omicdata"} returned by 
-the function \code{omicdata}.}
+\item{omicdata}{An object of class \code{"microarray"}, \code{"RNAseq"} or
+\code{"metabolomic"} respectively returned by 
+functions \code{microarraydata}, \code{RNAseqdata} or 
+\code{metabolomicdata}.}
 
-\item{select.method}{The chosen method for selecting items using the \code{limma} package : \code{"quadratic"} for a 
+\item{select.method}{The chosen method for selecting items using the \code{limma} package for microarray and metabolomic data and the \code{DESeq2}
+package for RNAseq data : \code{"quadratic"} for a 
 quadratic trend test on dose ranks, \code{"linear"} for a linear trend test on dose ranks and \code{"ANOVA"} for 
 an ANOVA-type test (see details for further explaination).}
 
 \item{FDR}{The threshold in term of FDR (False Discovery Rate) for selecting responsive items.}
+
+\item{max.ties.prop}{The maximal tolerated proportion of tied values for each item, 
+  above which the item cannot be selected (must be in ]0, 0.5], 
+  and by default fixed at 0.2 - see details for a description of this filtering step).}
 
 \item{x}{An object of class \code{"itemselect"}.}
 
@@ -30,9 +38,15 @@ an ANOVA-type test (see details for further explaination).}
 }
 
 \details{
-The selection of responsive items is performed using the \code{limma} package. 
-Three methods are proposed, all implemented using functions \code{\link{lmFit}},  
+The selection of responsive items is performed using the \code{limma} package
+for microarray and metabolomic data and the \code{DESeq2} package for
+RNAseq data. 
+Three methods are proposed (as described below). Within \code{limma} those methods are implemented using functions \code{\link{lmFit}},  
 \code{\link{eBayes}} and \code{\link{topTable}} with p-values ajusted for multiple 
+testing using the Benjamini-Hochberg method, with the false discovery rate given in
+input (argument \code{FDR}). Within \code{DESeq2} those methods
+are implemented using functions \code{\link{DESeqDataSetFromMatrix}},  
+\code{\link{DESeq}} and \code{\link{results}} with p-values ajusted for multiple 
 testing using the Benjamini-Hochberg method, with the false discovery rate given in
 input (argument \code{FDR}). 
 
@@ -51,6 +65,11 @@ tests the global significance of a quadratic model describing the response as a 
 It is a variant of the linear trend method that aims at detecting monotonic and non monotonic trends from a dose-response designs, whatever the number of replicates per dose (default chosen method).
  }
  
+A filter on the proportion of tied values is also performed whatever the type of data, assuming 
+tied values correspond to a minimal common value at which non detections were imputed. 
+All items having a proportion of such tied minimal values above the input argument
+\code{max.ties.prop} are not selected.
+ 
 }
 
 \value{ 
@@ -61,7 +80,8 @@ It is a variant of the linear trend method that aims at detecting monotonic and 
 
   \item{ selectindex }{ the corresponding vector of row indices of selected items in the object omicdata }
 
-  \item{omicdata}{The corresponding object of class "omicdata" given in input.}
+  \item{omicdata}{The corresponding object of class \code{"microarraydata"},
+  \code{"RNAseqdata"} or \code{"metabolomicdata"} given in input.}
 
   \item{select.method}{The selection method given in input.}
 
@@ -73,7 +93,10 @@ It is a variant of the linear trend method that aims at detecting monotonic and 
 
 \seealso{
     See \code{\link{lmFit}}, \code{\link{eBayes}} and \code{\link{topTable}}
-    for details about the used functions of the \code{limma} package.
+    for details about the used functions of the \code{limma} package and 
+    \code{\link{DESeqDataSetFromMatrix}},
+    \code{\link{DESeq}} and \code{\link{results}}
+    for details about the used functions of the \code{DESeq2} package.
 }
 
 \references{ 
@@ -81,6 +104,8 @@ Tukey JW, Ciminera JL and Heyse JF (1985), \emph{Testing the statistical certain
 
 
 Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, and Smyth, GK (2015), \emph{limma powers differential expression analyses for RNA-sequencing and microarray studies}. Nucleic Acids Research 43, e47.
+
+Love MI, Huber W, and Anders S (2014), \emph{Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2}. Genome biology, 15(12), 550.
 
 }
 
@@ -90,11 +115,11 @@ Marie-Laure Delignette-Muller
 
 \examples{
 
-# (1) an example on a transcriptomics data (a subsample of a greater data set) 
+# (1) an example on a microarray data set (a subsample of a greater data set) 
 #     
-datatxt <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
 
-(o <- omicdata(datatxt, check = TRUE, norm.method = "cyclicloess"))
+(o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess"))
 
 # 1.a using the quadratic trend test
 #

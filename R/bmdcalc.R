@@ -47,6 +47,7 @@ bmdcalc <- function(f, z = 1, x = 10)
                       BMDp = rep(NA,nselect), 
                       BMDsd = rep(NA,nselect)
   )
+  xdiv100 <- x/100 # x in relative value and not in percentage
   
   for(i in 1:nselect)
   {
@@ -61,38 +62,37 @@ bmdcalc <- function(f, z = 1, x = 10)
     modeli <- dfitall$model[i]
     if(modeli == "linear") {
       ydosemax <- dcalc$ydosemax[i] <- flin(x=dosemax, b=b, d=d)
-      dcalc$yp[i] <- y0 * ( 1 + x/100*sign(b))
+      dcalc$yp[i] <- y0 * ( 1 + xdiv100*sign(b))
       dcalc$BMDp[i] <- invlin(dcalc$yp[i], b, d)
       dcalc$ysd[i] <- y0 + z*dfitall$SDres[i]*sign(b)
       dcalc$BMDsd[i] <- invlin(dcalc$ysd[i], b, d)
     } else
     if(modeli == "exponential") {
       ydosemax <- dcalc$ydosemax[i] <- fExpo(x=dosemax, b=b, d=d, e=e)
-      dcalc$yp[i] <- y0 * ( 1 + x/100*sign(e*b))
+      dcalc$yp[i] <- y0 * ( 1 + xdiv100*sign(e*b))
       dcalc$BMDp[i] <- invExpo(dcalc$yp[i], b, d, e)
       dcalc$ysd[i] <- y0 + z*dfitall$SDres[i]*sign(e*b)
       dcalc$BMDsd[i] <- invExpo(dcalc$ysd[i], b, d, e)
     } else
     if(modeli == "Hill") {
       ydosemax <- dcalc$ydosemax[i] <- fHill(x=dosemax, b=b, c=c, d=d, e=e)
-      dcalc$yp[i] <- y0 * ( 1 + x/100*sign(c - d))
+      dcalc$yp[i] <- y0 * ( 1 + xdiv100*sign(c - d))
       dcalc$BMDp[i] <- invHill(dcalc$yp[i], b, c, d, e)
       dcalc$ysd[i] <- y0 + z*dfitall$SDres[i]*sign(c - d)
       dcalc$BMDsd[i] <- invHill(dcalc$ysd[i], b, c, d, e)
     } else
     if(modeli == "log-probit") {
-      ydosemax <- dcalc$ydosemax[i] <- fHill(x=dosemax, b=b, c=c, d=d, e=e)
-      dcalc$yp[i] <- y0 * ( 1 + x/100*sign(c - d))
+      ydosemax <- dcalc$ydosemax[i] <- fLGauss5p(x=dosemax, b=b, c=c, d=d, e=e, f=0)
+      dcalc$yp[i] <- y0 * ( 1 + xdiv100*sign(c - d))
       dcalc$BMDp[i] <- invLprobit(dcalc$yp[i], b, c, d, e)
       dcalc$ysd[i] <- y0 + z*dfitall$SDres[i]*sign(c - d)
       dcalc$BMDsd[i] <- invLprobit(dcalc$ysd[i], b, c, d, e)
     } else
     if(modeli == "Gauss-probit") {
-      #print("Gauss")
       yext <- dcalc$yextrem[i] <- fGauss5p(xext, b=b, c=c, d=d, e=e, f=g) # g is renamed f
       ydosemax <- dcalc$ydosemax[i] <- fGauss5p(x=dosemax, b=b, c=c, d=d, e=e, f=g)
       
-      deltap <- y0 * x/100
+      deltap <- abs(y0) * xdiv100
       deltasd <- z * dfitall$SDres[i]
       
       resBMDp <- calcBMD(y0=y0, delta=deltap, xext=xext, yext=yext, dosemax=dosemax, 
@@ -108,7 +108,7 @@ bmdcalc <- function(f, z = 1, x = 10)
     if(modeli == "log-Gauss-probit") {
       yext <- dcalc$yextrem[i] <- fLGauss5p(xext, b=b, c=c, d=d, e=e, f=g) # g is renamed f
       ydosemax <- dcalc$ydosemax[i] <- fLGauss5p(x=dosemax, b=b, c=c, d=d, e=e, f=g)
-      deltap <- y0 * x/100
+      deltap <- abs(y0) * xdiv100
       deltasd <- z * dfitall$SDres[i]
       
       resBMDp <- calcBMD(y0=y0, delta=deltap, xext=xext, yext=yext, dosemax=dosemax, ydosemax=ydosemax, func=fLGauss5pBMR, b=b, c=c, d=d, e=e, g=g)
@@ -163,22 +163,24 @@ print.bmdcalc <- function(x, ...)
 }
 
 plot.bmdcalc <- function(x, BMDtype = c("zSD", "xfold"), 
-                         plottype = c("ecdf", "hist", "density"), bytypology = FALSE, 
+                         plottype = c("ecdf", "hist", "density"), 
+                         by = c("none", "trend", "model", "typology"), 
                          hist.bins = 30, ...) 
 {
   if (!inherits(x, "bmdcalc"))
     stop("Use only with 'bmdcalc' objects")
   BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
   plottype <- match.arg(plottype, c("ecdf", "hist", "density"))  
-  
-  # que faire des NA et NaN (enlever, les représenter en données censurées ?)
+  by <- match.arg(by, c("none", "trend", "model", "typology"))  
   
   if (BMDtype == "zSD")
   {
-    dwithNANaN <- data.frame(BMD = x$res$BMD.zSD, typology = x$res$typology)
+    dwithNANaN <- data.frame(BMD = x$res$BMD.zSD, 
+      trend = x$res$trend, model = x$res$model, typology = x$res$typology)
   } else
   {
-    dwithNANaN <- data.frame(BMD = x$res$BMD.xfold, typology = x$res$typology)
+    dwithNANaN <- data.frame(BMD = x$res$BMD.xfold, 
+      trend = x$res$trend, model = x$res$model, typology = x$res$typology)
   }
   
   # Remove NA and NaN values if needed
@@ -187,40 +189,42 @@ plot.bmdcalc <- function(x, BMDtype = c("zSD", "xfold"),
   if (nremoved > 0)
     warning(nremoved," BMD coded NA or NaN were removed before plotting")
   
-  if (bytypology) # distribution of BMDs by typology of curves
+  # previous version splitted by typology and colored by typology
+  # if (plottype == "hist") 
+  # {
+  #   g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) +
+  #       geom_histogram(bins = hist.bins) + facet_wrap(~ typology)
+  # } else
+  #   if (plottype == "density") 
+  #   {
+  #     g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) + 
+  #         geom_density() + facet_wrap(~ typology)
+  #     } else
+  #       if (plottype == "ecdf") 
+  #       {
+  #         g <- ggplot(data = d, mapping = aes_(x = quote(BMD), col = quote(typology))) +
+  #           stat_ecdf(geom = "step") + facet_wrap(~ typology) + ylab("ECDF")
+  #       } 
+    
+  if (plottype == "hist") 
   {
-    if (plottype == "hist") 
-    {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) +
-        geom_histogram(bins = hist.bins) + facet_wrap(~ typology)
-    } else
-      if (plottype == "density") 
-      {
-        g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) + 
-          geom_density() + facet_wrap(~ typology)
-      } else
-        if (plottype == "ecdf") 
-        {
-          g <- ggplot(data = d, mapping = aes_(x = quote(BMD), col = quote(typology))) +
-            stat_ecdf(geom = "step") + facet_wrap(~ typology) + ylab("ECDF")
-        }      
-  }  else
-  { # global distribution of BMDs
-    if (plottype == "hist") 
-    {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
+    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
         geom_histogram(bins = hist.bins) 
-    } else
-      if (plottype == "density") 
-      {
-        g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) + geom_density(fill = I("grey"))
-      } else
-        if (plottype == "ecdf") 
-        {
-          g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
+  } else
+  if (plottype == "density") 
+  {
+    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) + geom_density(fill = I("grey"))
+  } else
+  if (plottype == "ecdf") 
+  {
+    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
             stat_ecdf(geom = "step") + ylab("ECDF")
-        }      
-  } 
+  }
+  
+  if (by == "trend")  g <- g + facet_wrap(~ trend) else
+    if (by == "model") g <- g + facet_wrap(~ model) else
+      if (by == "typology") g <- g + facet_wrap(~ typology)
+    
   return(g)
 }
 

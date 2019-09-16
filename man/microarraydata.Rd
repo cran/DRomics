@@ -1,24 +1,34 @@
-\name{omicdata}
+\name{microarraydata}
+\alias{microarraydata}
 \alias{omicdata}
-\alias{print.omicdata}
-\alias{plot.omicdata}
-\title{Import, check and normalization of omics data}
+\alias{print.microarraydata}
+\alias{plot.microarraydata}
+\title{Import, check and normalization of single-channel microarray data}
 
 \description{
-Data are imported from a .txt file, checked (see the description 
+Single-channel microarray data in log2 are imported from a .txt file 
+(internally imported using the function \code{\link{read.table}}), 
+checked (see the description 
 of argument \code{file} for the required format
-of data) and normalized if required.
+of data) and normalized (between arrays
+normalization).
+\code{omicdata} is a deprecated version of \code{microarraydata}.
 }
 
 \usage{
-omicdata(file, check = TRUE, norm.method = c("none", "cyclicloess", "quantile", "scale"))
+microarraydata(file, check = TRUE, 
+  norm.method = c("cyclicloess", "quantile", "scale", "none"))
+  
+omicdata(file, check = TRUE, 
+  norm.method = c("cyclicloess", "quantile", "scale", "none"))
 
-\method{print}{omicdata}(x, \dots)
-\method{plot}{omicdata}(x, \dots)
+\method{print}{microarraydata}(x, \dots)
+\method{plot}{microarraydata}(x, \dots)
 }
 
 \arguments{
-\item{file}{The name of the .txt file containing one row per item, with the first column corresponding to the identifier of each item, in a column named 
+\item{file}{The name of the .txt file (e.g. \code{"mydata.txt"})
+containing one row per item, with the first column corresponding to the identifier of each item, in a column named 
 \code{"item"}, and the other columns giving the responses
 of the item for each replicate at each dose or concentration. 
 The names of the corresponding columns must correspond to the tested
@@ -30,13 +40,15 @@ doses or concentrations in a numeric format for the corresponding replicate (for
 normalization is performed using the function normalizeBetweenArrays of the 
 \code{limma} package using the specified method.}
 
-\item{x}{An object of class \code{"omicdata"}.}
+\item{x}{An object of class \code{"microarraydata"}.}
 
 \item{\dots}{ further arguments passed to print or plot functions.}
 }
 
 \details{
-This function imports the data from a .txt file, then checks the format of 
+This function imports the data from a .txt file, using the function
+\code{\link{read.table}} with its default field separator (sep argument),
+then checks the format of 
 data (see the description 
 of argument \code{file} for the required format
 of data) and gives in the \code{print} information
@@ -49,8 +61,8 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
 }
 
 \value{ 
-   \code{omicdata} returns an object of class "omicdata", a list with 5 components:
-    \item{data}{ the numeric matrix of responses of each item in each replicate
+   \code{microarraydata} returns an object of class "microarraydata", a list with 7 components:
+    \item{data}{ the numeric matrix of normalized responses of each item in each replicate
   (one line per item, one column per replicate)  }
 
     \item{dose}{ the numeric vector of the tested doses or concentrations corresponding
@@ -71,15 +83,16 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
     \item{data.beforenorm}{ the numeric matrix of responses of each item in each replicate
   (one line per item, one column per replicate) before normalization  }
 
-  The print of a \code{omicdata} object gives the tested doses (or concentrations) 
+  The print of a \code{microarraydata} object gives the tested doses (or concentrations) 
   and number of replicates for each dose, the number of items, the identifiers 
   of the first 20 items (for check of good coding of data) and the normalization method.
-   The plot of a \code{omicdata} object shows the data distribution for each dose or concentration and replicate before and after normalization.
+   The plot of a \code{microarraydata} object shows the data distribution for each dose or concentration and replicate before and after normalization.
 }
 
 \seealso{
-    See \code{\link{normalizeBetweenArrays}} for details about the normalization.
-}
+    See \code{\link{read.table}} the function used to import data, 
+    \code{\link{normalizeBetweenArrays}} for details about the normalization and 
+    \code{\link{RNAseqdata}} and \code{\link{metabolomicdata}} for other types of data.}
 
 \references{ 
 Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, and Smyth, GK (2015), \emph{limma powers differential expression analyses for RNA-sequencing and microarray studies}. Nucleic Acids Research 43, e47.
@@ -90,17 +103,28 @@ Marie-Laure Delignette-Muller
 }
 
 \examples{
-# (1) import, check and normalization of transcriptomics data 
+# (1) import, check and normalization of microarray data 
 # (an example on a subsample of a greater data set)
 #
-datatxt <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
-
-o <- omicdata(datatxt, check = TRUE, norm.method = "cyclicloess")
+datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess")
 print(o)
 plot(o)
 
+# If you want to use your own data set just replace datafilename, 
+# the first argument of microarraydata(), 
+# by the name of your data file (e.g. "mydata.txt")
+# 
+# You should take care that the field separator of this data file is one
+# of the default field separators recognised by the read.table() function
+# when it is used with its default field separator (sep argument)
+# Tabs are recommended.
+
+
 # (2) normalization with other methods
-(o.2 <- omicdata(datatxt, check = TRUE, norm.method = "quantile"))
-(o.3 <- omicdata(datatxt, check = TRUE, norm.method = "scale"))
+(o.2 <- microarraydata(datafilename, check = TRUE, norm.method = "quantile"))
+plot(o.2)
+(o.3 <- microarraydata(datafilename, check = TRUE, norm.method = "scale"))
+plot(o.3)
 
 }
