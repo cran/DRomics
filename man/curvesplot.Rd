@@ -3,20 +3,21 @@
 \title{Plot of fitted curves}
 
 \description{
-Plots fitted curves from an extended dataframe of the fitted results
-}
+Provides a plot of all the fitted curves from a dataframe of the main workflow
+results, possibly extended with 
+additional information (e.g. groups from functional annotation) used to color and/or split the curves. }
 
 \usage{
 curvesplot(extendedres, xmin = 0, xmax, y0shift = TRUE,
-                       facetby, colorby, removelegend = FALSE,  
-                        npoints = 50, line.size = 0.2, 
-                        line.alpha = 1)}
+                       facetby, free.y.scales = FALSE, colorby, removelegend = FALSE,  
+                        npoints = 500, line.size = 0.2, 
+                        line.alpha = 1, dose_log_transfo = FALSE)}
 
 \arguments{
 \item{extendedres}{the dataframe of results provided by bmdcalc (res) or drcfit (fitres) 
  or a subset of this data frame (selected lines). This dataframe can be extended 
  with additional columns coming for example from the annotation of items, and some lines 
- can be duplicated if their corresponding item has more than one annotation. 
+ can be replicated if their corresponding item has more than one annotation. 
  This extended dataframe
  must at least contain the column giving the identification of each curve (\code{id}),
  the column \code{model} naming the fitted model and the values of 
@@ -33,17 +34,22 @@ the parameters (columns \code{b}, \code{c}, \code{d}, \code{e}, \code{f}).}
 \item{facetby}{optional argument naming the column of \code{extendedres} chosen 
   to split the plot in facets (no split if omitted).}
 
+\item{free.y.scales}{if TRUE the y scales are free in the different facets.}
+
 \item{colorby}{optional argument naming the column of \code{extendedres} chosen 
   to color the curves (no color if omitted).}
   
 \item{removelegend}{If \code{TRUE} the color legend is removed (useful if the number
-  of colors is great.}
+  of colors is great).}
 
 \item{npoints}{Number of points computed on each curve to plot it.}
 
 \item{line.size}{Size of the lines for plotting curves.}
 
 \item{line.alpha}{Transparency of the lines for plotting curves.}
+
+\item{dose_log_transfo}{If TRUE a log transformation of the dose is used in the plot. 
+  This option needs a definition of a strictly positive value of xmin in input.}
 
 }
 
@@ -83,13 +89,24 @@ f <- drcfit(s_quad, progressbar = TRUE)
 #
 curvesplot(f$fitres, xmax = max(f$omicdata$dose))
 
+# the same plot with dose in log scale (need x != 0 in input)
+curvesplot(f$fitres, xmin = 0.1, xmax = max(f$omicdata$dose),
+  dose_log_transfo = TRUE)
+
 # the equivalent using the output of bmdcalc
 (r <- bmdcalc(f))
 curvesplot(r$res, xmax = max(f$omicdata$dose))
 
-# plot of only U-shape curves colored by model
-resU <- r$res[r$res$trend == "U", ]
-curvesplot(resU, xmax = max(f$omicdata$dose), colorby = "model")
+# plot of curves colored by models
+curvesplot(r$res, xmax = max(f$omicdata$dose), colorby = "model")
+
+# plot of curves facetted by trends
+curvesplot(r$res, xmax = max(f$omicdata$dose), facetby = "trend")
+
+# the same plot with free y scales
+curvesplot(r$res, xmax = max(f$omicdata$dose), facetby = "trend",
+  free.y.scales =  TRUE)
+  
 
 \donttest{
 
@@ -120,5 +137,35 @@ datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomic
 
 curvesplot(f$fitres, xmax = max(f$omicdata$dose), facetby = "typology")
 }
+
+
+# (5) An example from data published by Larras et al. 2020
+# in Journal of Hazardous Materials
+# https://doi.org/10.1016/j.jhazmat.2020.122727
+
+# a dataframe with metabolomic results (output $res of bmdcalc() or bmdboot() functions)
+resfilename <- system.file("extdata", "triclosanSVmetabres.txt", package="DRomics")
+res <- read.table(resfilename, header = TRUE, stringsAsFactors = TRUE)
+str(res)
+
+# a dataframe with annotation of each item identified in the previous file
+# each item may have more than one annotation (-> more than one line)
+annotfilename <- system.file("extdata", "triclosanSVmetabannot.txt", package="DRomics")
+annot <- read.table(annotfilename, header = TRUE, stringsAsFactors = TRUE)
+str(annot)
+
+# Merging of both previous dataframes
+# in order to obtain an extenderes dataframe
+# bootstrap results and annotation
+extendedres <- merge(x = res, y = annot, by.x = "id", by.y = "metab.code")
+head(extendedres)
+
+# Plot of the dose-response curves for a specific pathway
+# in this example the "lipid metabolism" pathclass
+LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
+curvesplot(LMres, facetby = "id", npoints = 100, line.size = 1,
+           colorby = "trend",
+           xmin = 0, xmax = 8) 
+
 
 }

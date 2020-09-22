@@ -15,20 +15,25 @@ server <- function(input, output, session) {
       microarraydata(input$datafile_microarray$datapath, check = TRUE, norm.method = input$normMethod_microarray)
     } else if(inTypeData() == 'rnaseqdata') {
       req(input$datafile_rnaseq)
-      RNAseqdata(input$datafile_rnaseq$datapath, check = TRUE, transfo.method = input$transfoMethod_rnaseq)
+      RNAseqdata(input$datafile_rnaseq$datapath, check = TRUE, transfo.method = input$transfoMethod_rnaseq, round.counts = TRUE)
     } else if(inTypeData() == 'metabolomicdata') {
       req(input$datafile_metabolomic)
       metabolomicdata(input$datafile_metabolomic$datapath, check = TRUE)
+    } else if(inTypeData() == 'continuousanchoringdata') {
+      req(input$datafile_anchoring)
+      continuousanchoringdata(input$datafile_anchoring$datapath, check = TRUE)
     }
   })
   
   ## Output : print and plot omic data
   output$printOmicData <- renderPrint({ 
-    print(filedata())
+    ff <- filedata()
+    print(ff)
   })
   
   output$plotOmicData <- renderPlot({
-    plot(filedata())
+    ff <- filedata()
+    plot(ff, range = 1e10)
   })
   
   
@@ -66,16 +71,19 @@ server <- function(input, output, session) {
     return(drcfit(signifitems, progressbar = FALSE, sigmoid.model = "Hill", parallel = "no"))
   })
   
-  inPlottypeDrcfit <- reactive({input$plottypeDrcfit})
   
   output$plotDrcfit <- renderPlot({
     mydrcfit <- rundrcfit()
-    plotdrcfit <- plot(mydrcfit, plot.type = inPlottypeDrcfit())
-    plot(plotdrcfit)
     
-    output$okfordowload <- reactive({length(mydrcfit)})
-    outputOptions(output, "okfordowload", suspendWhenHidden = FALSE)
+    myplotdrcfit <- reactive({
+      plot(mydrcfit, plot.type = input$plottypeDrcfit, dose_log_transfo = as.logical(input$logdosescale))
+    })
     
+    mpd <- myplotdrcfit()
+    if(!is.null(mpd))
+      plot(mpd)
+    
+    showElement("buttonDownloadDrcfitplot")
     output$buttonDownloadDrcfitplot <- downloadHandler(
       filename = function(){
         "drcfitplot.pdf"
@@ -113,11 +121,42 @@ server <- function(input, output, session) {
     mybmdcalcdigits[, idx] <- signif(mybmdcalcdigits[, idx], digits = 4)
     print(mybmdcalcdigits)
     
+    myplottype <- input$plottype
     output$plotBmdcalc <- renderPlot({
-      plot(mybmdcalc, BMDtype = input$BMDtype, 
-           plottype = input$plottype, 
-           by = input$splitby, 
-           hist.bins = input$histbin)
+      
+      ##### ecdfcolorgradient #####
+      if(myplottype == 'ecdfcolorgradient') {
+        if(input$splitby == 'none') {
+          bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
+                              BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
+                              add.label = as.logical(input$label_ecdfgradient))
+        } else {
+          bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
+                              facetby = input$splitby,
+                              BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
+                              add.label = as.logical(input$label_ecdfgradient))
+        }
+        
+        ##### ecdf #####
+      } else if (myplottype == 'ecdf') {
+        if(as.logical(input$logbmd_ecdf)) {
+          plot(mybmdcalc, BMDtype = input$BMDtype, 
+               plottype = 'ecdf', 
+               by = input$splitby, 
+               hist.bins = input$histbin) + scale_x_log10()
+        } else {
+          plot(mybmdcalc, BMDtype = input$BMDtype, 
+               plottype = 'ecdf', 
+               by = input$splitby, 
+               hist.bins = input$histbin)
+        }
+        
+      } else {
+        plot(mybmdcalc, BMDtype = input$BMDtype, 
+             plottype = myplottype, 
+             by = input$splitby, 
+             hist.bins = input$histbin)
+      }
     })
     
     # activate the button
@@ -141,8 +180,42 @@ server <- function(input, output, session) {
         paste0("data-", Sys.Date(), ".pdf")
       },
       content = function(file) {
+        myplottype <- input$plottype
         pdf(file, width = 8, height = 8)
-        print(plot(mybmdcalc, BMDtype = input$BMDtype, plottype = input$plottype, by = input$splitby))
+        print(
+          
+          if(myplottype == 'ecdfcolorgradient') {
+            if(input$splitby == 'none') {
+              bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
+                                  BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
+                                  add.label = as.logical(input$label_ecdfgradient))
+            } else {
+              bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
+                                  facetby = input$splitby,
+                                  BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
+                                  add.label = as.logical(input$label_ecdfgradient))
+            }
+            
+          } else if(myplottype == 'ecdf') {
+            if(as.logical(input$logbmd_ecdf)) {
+              plot(mybmdcalc, BMDtype = input$BMDtype, 
+                   plottype = 'ecdf', 
+                   by = input$splitby, 
+                   hist.bins = input$histbin) + scale_x_log10()
+            } else {
+              plot(mybmdcalc, BMDtype = input$BMDtype, 
+                   plottype = 'ecdf', 
+                   by = input$splitby, 
+                   hist.bins = input$histbin)
+            }
+            
+          } else {
+            plot(mybmdcalc, BMDtype = input$BMDtype, 
+                 plottype = myplottype, 
+                 by = input$splitby, 
+                 hist.bins = input$histbin)
+            
+          })
         dev.off()
       },
       contentType = {"application/pdf"}
@@ -153,9 +226,8 @@ server <- function(input, output, session) {
   ####################################################################################
   ####### R CODE #####################################################################
   ####################################################################################
-
+  
   output$printRCode <- renderText({
-    # req(input$datafile)
     
     if(inTypeData() == 'microarraydata') {
       req(input$datafile_microarray)
@@ -171,7 +243,7 @@ server <- function(input, output, session) {
               paste0("o <- ", ifelse(input$typeData == 'microarraydata', 
                                      paste0("microarraydata('", input$datafile_microarray$name, "', check = TRUE, norm.method = '", input$normMethod_microarray, "')"), 
                                      ifelse(input$typeData == 'rnaseqdata', 
-                                            paste0("RNAseqdata('", input$datafile_rnaseq$name, "', check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "')"), 
+                                            paste0("RNAseqdata('", input$datafile_rnaseq$name, "', check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "', round.counts = TRUE)"), 
                                             paste0("metabolomicdata('", input$datafile_metabolomic$name, "', check = TRUE)")))),
               "print(o)",
               "plot(o)",
@@ -183,11 +255,29 @@ server <- function(input, output, session) {
               "# Step 3",
               paste0("f <- drcfit(s, progressbar = FALSE, sigmoid.model = 'Hill', parallel = 'no')"),
               "# This computation time can be reduced using parallel computing (see ?drcfit)",
-              "plot(f)",
+              paste0("plot(f, plot.type = '", input$plottypeDrcfit, "', dose_log_transfo = ", input$logdosescale, ")"),
               "",
               "# Step 4",
               paste0("r <- bmdcalc(f, z = ", numZbmdcalc(), ", x = ", numXbmdcalc(), ")"),
-              paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", input$histbin, ")"))
+              if(input$plottype == 'ecdfcolorgradient') {
+                if(input$splitby == 'none') {
+                  paste0("bmdplotwithgradient(r$res, BMDtype = '", input$BMDtype, 
+                         ", BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), ")")
+                } else {
+                  paste0("bmdplotwithgradient(r$res, BMDtype = '", input$BMDtype, 
+                         ", BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), 
+                         ", facetby = '", input$splitby, "')")
+                }
+              } else if(input$plottype == 'ecdf') {
+                if(as.logical(input$logbmd_ecdf)) {
+                  paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = 'ecdf', by = '", input$splitby, "', hist.bins = ", input$histbin, ") + scale_x_log10()")
+                } else {
+                  paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = 'ecdf', by = '", input$splitby, "', hist.bins = ", input$histbin, ")")
+                }
+              } else {
+                paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", input$histbin, ")")
+              }
+    )
     
     output$buttonDownRCode <- downloadHandler(
       filename = function(){
@@ -235,7 +325,7 @@ server <- function(input, output, session) {
               "a <- b$res[is.finite(b$res$BMD.zSD.upper), ] # removing of CI with infinite bounds",
               "ecdfplotwithCI(variable = a$BMD.zSD, CI.lower = a$BMD.zSD.lower, 
   CI.upper = a$BMD.zSD.upper, by = a$model, CI.col = a$trend)"
-              )
+    )
     
     output$buttonDownRCodeFurther <- downloadHandler(
       filename = function(){

@@ -156,7 +156,7 @@ print.bmdcalc <- function(x, ...)
         (coded NA as the BMR stands within the range of response values defined by the model 
         but outside the range of tested doses).\n")
   
-  if ((nNA.BMD.zSD = 0) &  (nNA.BMD.xfold = 0) & (nNaN.BMD.zSD = 0) &  (nNaN.BMD.xfold = 0))
+  if ((nNA.BMD.zSD == 0) &  (nNA.BMD.xfold == 0) & (nNaN.BMD.zSD == 0) &  (nNaN.BMD.xfold == 0))
     cat("BMD-xfold and BMD-SD values could be calculated on all the curves
         (the BMR always stands within the range of response values defined by the model
         and within the range of tested doses).\n")
@@ -189,23 +189,6 @@ plot.bmdcalc <- function(x, BMDtype = c("zSD", "xfold"),
   if (nremoved > 0)
     warning(nremoved," BMD coded NA or NaN were removed before plotting")
   
-  # previous version splitted by typology and colored by typology
-  # if (plottype == "hist") 
-  # {
-  #   g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) +
-  #       geom_histogram(bins = hist.bins) + facet_wrap(~ typology)
-  # } else
-  #   if (plottype == "density") 
-  #   {
-  #     g <- ggplot(data = d, mapping = aes_(x = quote(BMD), fill = quote(typology))) + 
-  #         geom_density() + facet_wrap(~ typology)
-  #     } else
-  #       if (plottype == "ecdf") 
-  #       {
-  #         g <- ggplot(data = d, mapping = aes_(x = quote(BMD), col = quote(typology))) +
-  #           stat_ecdf(geom = "step") + facet_wrap(~ typology) + ylab("ECDF")
-  #       } 
-    
   if (plottype == "hist") 
   {
     g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +

@@ -1,32 +1,50 @@
 ### import, check normalize and transform RNAseq data
 
 RNAseqdata <- function(file, check = TRUE, 
-                     transfo.method = c("rlog", "vst"))
+                     transfo.method = c("rlog", "vst"), 
+                     transfo.blind = TRUE, round.counts = FALSE)
 {
-  if (check)
+  if (is.data.frame(file))
   {
-    # check argument file
-    if (!is.character(file))
-      stop("The argument file must be a character string")
-    le.file <- nchar(file)
-    suffix <- substr(file, le.file - 3, le.file)
-    if (suffix != ".txt")
-      stop("The argument file must be a character string ending by .txt")
+    d <- file
+  } else
+  {
+    if (check)
+    {
+      # check argument file
+      if (!is.character(file))
+        stop("The argument file must be a character string")
+      le.file <- nchar(file)
+      suffix <- substr(file, le.file - 3, le.file)
+      if (suffix != ".txt")
+        stop("The argument file must be a character string ending by .txt")
+    }
+    d <- read.table(file, header = FALSE)
+    
   }
-  
-  d <- read.table(file, header = FALSE)
   nrowd <- nrow(d)
   ncold <- ncol(d)
   data <- as.matrix(d[2:nrowd, 2:ncold]) 
-  subdata4check <- data[1:min(nrow(data), 10), ]
-  subdata4checkT <- trunc(subdata4check)
-  if (!identical(subdata4check, subdata4checkT))
-    stop("Your data contain non integer values. 
-            Make sure that your RNAseq data are imported in raw counts.\n") 
-  if (nrowd < 100)
+  nrowdata <- nrowd - 1
+  
+  if (round.counts)
+  {
+    data <- round(data)
+  } else
+  {
+    subdata4check <- data[1:min(nrowdata, 10), ]
+    subdata4checkT <- trunc(subdata4check)
+    if (!identical(subdata4check, subdata4checkT))
+      stop("Your data contain non integer values. 
+            Make sure that your RNAseq data are imported in raw counts.
+           If your counts come from Kallisto or Salmon put the argument round.counts
+          of RNAseqdata at TRUE to round them.\n") 
+  }
+  if (nrowdata < 100)
     warning("Your dataset contains less than 100 lines. Are you sure you really
             work on RNAseq data ? This function should
             not be used with another type of data.")
+  
   
   
   if (check)
@@ -43,27 +61,69 @@ RNAseqdata <- function(file, check = TRUE,
   if(transfo.method == "rlog")
     cat("Just wait, the transformation using regularized logarithm (rlog)
         may take a few minutes.\n")
+  
   raw.counts <- data
+  (dose <- as.vector(unlist(d[1, 2:ncold])))
+  fdose <- as.factor(dose)
+  
+  if(!transfo.blind)
+  {
+    coldata <- data.frame(fdose = fdose)
+    rownames(coldata) <- colnames(data)
+    dds <- DESeqDataSetFromMatrix(
+      countData = raw.counts,
+      colData = coldata,
+      design = ~ fdose)
+  }
+    
   if (transfo.method == "rlog")
   {
-    data <- rlog(data)  
-  } else
+    if (transfo.blind) 
+      {
+        data <- rlog(raw.counts)
+      } else
+      {
+        data <- assay(rlog(dds, blind = FALSE))  
+      }
+  } else # transfo.method == "vst"
   {
-    data <- vst(data)  
+    nsub <- 1000 # parameter of vst to speed computation
+    if (transfo.blind) 
+    {
+      if (nrowdata < nsub)
+      {
+        data <- varianceStabilizingTransformation(raw.counts)
+      } else
+      {
+        data <- vst(raw.counts, nsub = nsub)
+      }
+    } else
+    {
+      if (nrowdata < nsub)
+      {
+        data <- varianceStabilizingTransformation(raw.counts, blind = FALSE)
+      } else
+      {
+        data <- assay(vst(dds, nsub = nsub, blind = FALSE))  
+      }
+    }
   }
   
   # definition of doses and item identifiers
-  (dose <- as.vector(unlist(d[1, 2:ncold])))
   row.names(data) <- item <- as.character(d[2:nrowd, 1])
   (nitems <- nrow(data))
   
   # control of the design
   design <- table(dose, dnn = "")
-  if (length(design) < 5)
+  if (length(design) < 4)
     stop("Dromics cannot be used with a dose-response design 
-         with less than five tested doses/concentrations")
-  
-  fdose <- as.factor(dose)
+         with less than four tested doses/concentrations")
+  if (length(design) == 4)
+    warning("When using DRomics with a dose-response design with only four tested doses/concentrations, 
+            it is recommended to check after the modelling step that all selected models have no more 
+            than 4 parameters")  
+
+  # calculation of the means per dose
   tdata <- t(data)
   calcmean <- function(i)
   {
@@ -115,12 +175,12 @@ plot.RNAseqdata <- function(x, ...)
   par(mfrow = c(1,2), xaxt = "n")
   boxplot(x$raw.counts, xlab = "Samples", ylab = "Raw counts", 
           main = paste("Raw data"), 
-          ylim = c(ymin.rc, ymax.rc)) 
+          ylim = c(ymin.rc, ymax.rc), ...) 
   ymin.log <- min(x$data)
   ymax.log <- max(x$data)
   boxplot(x$data, xlab = "Samples", ylab = "Signal", 
           main = paste("Normalized and transformed data"), 
-          ylim = c(ymin.log, ymax.log))   
+          ylim = c(ymin.log, ymax.log), ...)   
   par(def.par)    
 }
 

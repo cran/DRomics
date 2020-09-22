@@ -1,5 +1,6 @@
 ### fit different models to each dose-response curve and choose the best fit 
 drcfit <- function(itemselect, sigmoid.model = c("Hill", "log-probit"), 
+                   information.criterion = c("AIC", "BIC"),
                    progressbar = TRUE, saveplot2pdf = TRUE, 
                    parallel = c("no", "snow", "multicore"), ncpus)
 {
@@ -42,10 +43,17 @@ drcfit <- function(itemselect, sigmoid.model = c("Hill", "log-probit"),
   nptsperDR <- ncol(data)
   nselect <- length(selectindex)
   
+  # Information criterion definition 
   AICdigits <- 2 # number of digits for rounding the AIC values
-  
-  kcrit = 2 # for defining AIC or BIC 
-  
+  information.criterion <- match.arg(information.criterion, c("AIC", "BIC"))
+  if (information.criterion == "AIC")
+  { 
+    kcrit <- 2 
+  } else
+  {
+    kcrit <- log(nptsperDR)
+  }
+
   # progress bar
   if (progressbar)
     pb <- txtProgressBar(min = 0, max = length(selectindex), style = 3)
@@ -428,17 +436,28 @@ drcfit <- function(itemselect, sigmoid.model = c("Hill", "log-probit"),
                       "AIC.L", "AIC.E", "AIC.H", "AIC.lP", "AIC.lGP", "AIC.GP",
                       "trendP")
 
-  dres <- cbind(data.frame(id = row.names(data[selectindex,]), 
+  dres <- cbind(data.frame(id = row.names(data)[selectindex], 
                            irow = selectindex, 
                            adjpvalue = adjpvalue),
                            dres)
     
   # removing of null models (const, model no 7) and 
   # fits eliminated by the quadratic trend test on residuals
-  dres <- dres[(dres$model != 7) & 
-                 ((dres$trendP > 0.05) | is.na(dres$trendP)) , ]
+  lines.success <- (dres$model != 7) & 
+    ((dres$trendP > 0.05) | is.na(dres$trendP))
   # is.na(trendP because anova of two models with very close RSS
   # may return NA for pvalue)
+  
+  # dres <- dres[(dres$model != 7) & 
+  #                ((dres$trendP > 0.05) | is.na(dres$trendP)) , ]
+  dres.failure <- dres[!lines.success, ]
+  dfail <- dres.failure[, c("id", "irow", "adjpvalue")]
+  dfail$cause <- character(length = nrow(dfail))
+  dfail$cause[dres.failure$model == 7] <- "constant.model"
+  dfail$cause[dres.failure$model != 7] <- "trend.in.residuals"
+  
+  dres <- dres[lines.success, ]
+
   # update of nselect
   nselect <- nrow(dres)
   
@@ -624,7 +643,9 @@ drcfit <- function(itemselect, sigmoid.model = c("Hill", "log-probit"),
     dev.off()
   }
   
-  reslist <- list(fitres = dc, omicdata = itemselect$omicdata, n.failure = n.failure, AIC.val = dAIC) 
+  reslist <- list(fitres = dc, omicdata = itemselect$omicdata,  
+                  information.criterion = information.criterion, information.criterion.val = dAIC,
+                  n.failure = n.failure, unfitres = dfail) 
   
   return(structure(reslist, class = "drcfit"))
 }
@@ -634,6 +655,7 @@ print.drcfit <- function(x, ...)
   if (!inherits(x, "drcfit"))
     stop("Use only with 'drcfit' objects")
   
+  ttrend <- table(x$fitres$trend)
   tfit <- table(x$fitres$model)
   nsucces <- nrow(x$fitres)
   nfirstselect <- x$n.failure + nsucces
@@ -642,13 +664,16 @@ print.drcfit <- function(x, ...)
         because no model could be fitted reliably.\n")
   cat("Distribution of the chosen models among the ",nsucces," fitted dose-response curves :\n")
   print(tfit)
+  cat("Distribution of the trends (curve shapes) among the ",nsucces," fitted dose-response curves :\n")
+  print(ttrend)
   ttypology <- table(x$fitres$typology)
   cat("Distribution of the typology of the ",nsucces," fitted dose-response curves :\n")
   print(ttypology)
 }
 
 plot.drcfit <- function(x, items, 
-                plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), ...)
+                plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), 
+                dose_log_transfo = FALSE, ...)
 {
   if (!inherits(x, "drcfit"))
     stop("Use only with 'drcfit' objects")
@@ -668,6 +693,8 @@ plot.drcfit <- function(x, items,
   if (is.character(items))
   {
     inditems <- match(items, x$fitres$id)
+    if (any(is.na(inditems)))
+    stop("At least one of the chosen items was not selected as responding. You should use targetplot() in that case.")
     subd <- x$fitres[inditems, ]
   }
   plotfitsubset(subd, 
@@ -675,7 +702,8 @@ plot.drcfit <- function(x, items,
                 data = x$omicdata$data, 
                 data.mean = x$omicdata$data.mean, 
                 npts = 500,
-                plot.type = plot.type) 
+                plot.type = plot.type, 
+                dose_log_transfo = dose_log_transfo) 
   
 }
 

@@ -3,18 +3,23 @@
 microarraydata <- function(file, check = TRUE, 
                      norm.method = c("cyclicloess", "quantile", "scale", "none"))
 {
-  if (check)
+  if (is.data.frame(file))
   {
-    # check argument file
-    if (!is.character(file))
-      stop("The argument file must be a character string")
-    le.file <- nchar(file)
-    suffix <- substr(file, le.file - 3, le.file)
-    if (suffix != ".txt")
-      stop("The argument file must be a character string ending by .txt")
-  }
-  
-  d <- read.table(file, header = FALSE)
+    d <- file
+  } else
+  {
+    if (check)
+    {
+      # check argument file
+      if (!is.character(file))
+        stop("The argument file must be a character string")
+      le.file <- nchar(file)
+      suffix <- substr(file, le.file - 3, le.file)
+      if (suffix != ".txt")
+        stop("The argument file must be a character string ending by .txt")
+    }
+    d <- read.table(file, header = FALSE)
+  }  
   nrowd <- nrow(d)
   ncold <- ncol(d)
   data <- as.matrix(d[2:nrowd, 2:ncold]) 
@@ -49,9 +54,13 @@ microarraydata <- function(file, check = TRUE,
   
   # control of the design
   design <- table(dose, dnn = "")
-  if (length(design) < 5)
+  if (length(design) < 4)
     stop("Dromics cannot be used with a dose-response design 
-         with less than five tested doses/concentrations")
+         with less than four tested doses/concentrations")
+  if (length(design) == 4)
+    warning("When using DRomics with a dose-response design with only four tested doses/concentrations, 
+            it is recommended to check after the modelling step that all selected models have no more 
+            than 4 parameters")  
   
   fdose <- as.factor(dose)
   tdata <- t(data)
@@ -106,10 +115,10 @@ plot.microarraydata <- function(x, ...)
     ymax <- max(x$data.beforenorm, x$data)
     par(mfrow = c(1,2), xaxt = "n")
     boxplot(x$data.beforenorm, xlab = "Samples", ylab = "Signal", 
-            main = paste("Microarray data before normalization"), ylim = c(ymin, ymax)) 
+            main = paste("Microarray data before normalization"), ylim = c(ymin, ymax), ...) 
     boxplot(x$data, xlab = "Samples", ylab = "Signal", 
             main = paste("Microarray data after", x$norm.method,"normalization"), 
-            ylim = c(ymin, ymax)) 
+            ylim = c(ymin, ymax), ...) 
     
   } else
   {

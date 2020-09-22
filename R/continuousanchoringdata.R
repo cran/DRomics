@@ -1,6 +1,6 @@
 ### import, check metabolomic data
 
-metabolomicdata <- function(file, check = TRUE)
+continuousanchoringdata <- function(file, check = TRUE)
 {
   if (is.data.frame(file))
   {
@@ -22,29 +22,21 @@ metabolomicdata <- function(file, check = TRUE)
   nrowd <- nrow(d)
   ncold <- ncol(d)
   data <- as.matrix(d[2:nrowd, 2:ncold]) 
-  if (any(data > 100))
-    warning("Your data contain high values (> 100). 
-    Make sure that your data (metabolomic signal) are in log-scale.\n") 
-  if (nrowd < 100)
-    warning("Your dataset contains less than 100 lines. Are you sure you really
-            work on metabolomics data ? This function should
-            not be used with another type of data.")
-  
+
   if (check)
   {
     # check that doses and responses are numeric
     if (!is.numeric(as.matrix(d[,2:ncold])))
       stop("All the columns except the first one must be numeric with the numeric 
-           dose in the firt line and the numeric response of each item in the other
+           dose in the firt line and the numeric response of each endpoint in the other
            lines.")
-    warning("We recommend you to check that your metabolomics data were correctly pretreated 
-            before importation. In particular data (metabolomic signal) 
-            should have been log-transformed, without replacing 0 values by NA values 
-            (consider using the half minimum method instead for example). \n")
+    warning("We recommend you to check that your anchoring data are continuous and
+      defined in a scale that enable the use of a Gaussian error model (needed at each step
+      of the workflow including the selection step). \n")
     
   }
   
-  # definition of doses and item identifiers
+  # definition of doses and endpoint identifiers
   (dose <- as.vector(unlist(d[1, 2:ncold])))
   row.names(data) <- item <- as.character(d[2:nrowd, 1])
   (nitems <- nrow(data))
@@ -72,41 +64,52 @@ metabolomicdata <- function(file, check = TRUE)
   reslist <- list(data = data, dose = dose, item = item, 
                   design = design, data.mean = data.mean)  
   
-  return(structure(reslist, class = "metabolomicdata"))
+  return(structure(reslist, class = "continuousanchoringdata"))
 }
 
 
-print.metabolomicdata <- function(x, ...)
+print.continuousanchoringdata <- function(x, ...)
 {
-  if (!inherits(x, "metabolomicdata"))
-    stop("Use only with 'metabolomic' objects")
+  if (!inherits(x, "continuousanchoringdata"))
+    stop("Use only with 'continuousanchoringdata' objects")
   
   cat("Elements of the experimental design in order to check the coding of the data :\n")
   cat("Tested doses and number of replicates for each dose:\n")
   print(x$design)
-  cat("Number of items: ", length(x$item),"\n")
+  cat("Number of endpoints: ", length(x$item),"\n")
   
   if (length(x$item) > 20)
   {
-    cat("Identifiers of the first 20 items:\n")
+    cat("Identifiers of the first 20 endpoints:\n")
     print(x$item[1:20])
   } else
   {
-    cat("Identifiers of the items:\n")
+    cat("Names of the endpoints:\n")
     print(x$item)
   }
 }
 
-plot.metabolomicdata <- function(x, ...) 
+plot.continuousanchoringdata <- function(x, ...) 
 {
-  if (!inherits(x, "metabolomicdata"))
-    stop("Use only with 'metabolomicdata' objects")
+  if (!inherits(x, "continuousanchoringdata"))
+    stop("Use only with 'continuousanchoringdata' objects")
 
-  def.par <- par(no.readonly = TRUE)
-    par(xaxt = "n")
-    boxplot(x$data, xlab = "Samples", ylab = "Signal", 
-            main = paste("Metabolomic data"), ...) 
-  par(def.par)    
+  nitems <- nrow(x$data)
+  dataobs <- data.frame(dose = numeric(), measure = numeric(), 
+                        endpoint = character())
+  for (i in 1:nitems)
+  {
+    dataobs <- rbind(dataobs, 
+                     data.frame(dose = x$dose, 
+                                measure = x$data[i, ], 
+                                endpoint = x$item[i]))
+  }
+  
+  dataobs$endpoint <- factor(dataobs$endpoint)
+  
+  g <- ggplot(dataobs, aes_(x = quote(dose), y = quote(measure))) + geom_point(shape = 1) +
+    facet_wrap(~ endpoint, scales = "free_y") 
+  return(g)
 }
 
 

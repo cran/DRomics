@@ -9,14 +9,16 @@ Fits dose reponse models to responsive items.
 }
 
 \usage{
-drcfit(itemselect, sigmoid.model = c("Hill", "log-probit"), 
+drcfit(itemselect, sigmoid.model = c("Hill", "log-probit"),
+                  information.criterion = c("AIC", "BIC"),
                    progressbar = TRUE, saveplot2pdf = TRUE, 
                    parallel = c("no", "snow", "multicore"), ncpus)
 
 \method{print}{drcfit}(x, \dots)
 
 \method{plot}{drcfit}(x, items, 
-  plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), \dots)
+  plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), 
+   dose_log_transfo = FALSE, \dots)
 }
 
 \arguments{
@@ -24,6 +26,9 @@ drcfit(itemselect, sigmoid.model = c("Hill", "log-probit"),
 
 \item{sigmoid.model}{The chosen sigmoid model, \code{"Hill"} (default
 choice) or \code{"log-probit"}.}
+
+\item{information.criterion}{The information criterion used to select the best fit model, \code{"AIC"} (default
+choice) or \code{"BIC"}.}
 
 \item{progressbar}{If \code{TRUE} a progress bar is used to follow the fitting process.}
 
@@ -47,8 +52,12 @@ choice) or \code{"log-probit"}.}
 \item{plot.type}{the type of plot, by default \code{"dose_fitted"} for the plot of 
  fitted curves with the observed points added to the plot and the observed means at each dose
  added as black plain circles, \code{"dose_residuals"} for the plot of the residuals as function
- of the dose, and \code{fitted_residuals} for the plot of the residuals as function of 
+ of the dose, and \code{"fitted_residuals"} for the plot of the residuals as function of 
  the fitted value.}
+
+\item{dose_log_transfo}{to put at \code{TRUE} to use a log transformation
+for the dose axis (only available if the dose is in x-axis, so not available
+for \code{plot.type} \code{"fitted_residuals"}).}
 
 \item{\dots}{ further arguments passed to graphical or print functions.}
 }
@@ -57,8 +66,8 @@ choice) or \code{"log-probit"}.}
 For each selected item, five dose-response models (linear, Hill, exponential, 
 Gauss-probit and log-Gauss-probit, see Larras et al. 2018
 for their definition) were fitted by non linear regression,
-using the \code{\link{nls}} function. The best one was chosen as the one giving the lowest AIC value.
-Items with the best AIC value not lower than the AIC value of the null model (constant model) minus 2
+using the \code{\link{nls}} function. The best one was chosen as the one giving the lowest AIC (or BIC) value.
+Items with the best AIC (or BIC) value not lower than the AIC (or BIC) value of the null model (constant model) minus 2
 were eliminated. Items with the best fit showing a global significant quadratic trend of the residuals
 as a function of the dose (in rank-scale) were also eliminated (the best fit is considered as 
 not reliable in such cases). Each retained item is classified in a twelve class typology depending of the
@@ -93,7 +102,8 @@ dose value at which their extremum is reached is at zero.
 \value{ 
    \code{drcfit} returns an object of class \code{"drcfit"}, a list with 4 components:
     
-   \item{fitres}{ a data frame reporting the results of the fit on each selected item (one line per item) sorted in the ascending order of the adjusted p-values returned by function \code{itemselect}. The different columns correspond to the identifier of each item (\code{id}), the row number of this item in the initial data set (\code{irow}), the adjusted p-value of the selection step (\code{adjpvalue}), the name of the best fit model (\code{model}), the number of fitted parameters (\code{nbpar}), the values of the parameters \code{b}, \code{c}, \code{d}, \code{e} and \code{f}, (\code{NA} for non used parameters), the residual standard deviation (\code{SDres}), the typology of the curve (\code{typology}), the
+   \item{fitres}{ a data frame reporting the results of the fit on each selected item 
+   for which a successful fit is reached (one line per item) sorted in the ascending order of the adjusted p-values returned by function \code{itemselect}. The different columns correspond to the identifier of each item (\code{id}), the row number of this item in the initial data set (\code{irow}), the adjusted p-value of the selection step (\code{adjpvalue}), the name of the best fit model (\code{model}), the number of fitted parameters (\code{nbpar}), the values of the parameters \code{b}, \code{c}, \code{d}, \code{e} and \code{f}, (\code{NA} for non used parameters), the residual standard deviation (\code{SDres}), the typology of the curve (\code{typology}), the
    rough trend of the curve (\code{trend}) defined with four classes (U, bell, increasing or decreasing shape), the
    theoretical value at the control \code{y0}), the theoretical y range for x within the range of 
    tested doses (\code{yrange}), 
@@ -105,15 +115,23 @@ dose value at which their extremum is reached is at zero.
     \item{omicdata}{ The corresponding object of class \code{"microarraydata"} given in input 
     (component of itemselect).}
  
+    \item{information.criterion}{The information criterion used to select the best fit model as given in input.}
+
+    \item{information.criterion.val}{ a data frame reporting AIC (or BIC) values for each selected item (one line per item) and each fitted model (one colum per model with the AIC (or BIC) value fixed at \code{Inf} when the fit failed).}
+
     \item{n.failure}{ The number of previously selected items on which the workflow failed to 
     fit an acceptable model.}
 
-    \item{AIC.val}{ a data frame reporting AIC values for each selected item (one line per item) and each fitted model (one colum per model with the AIC value fixed at \code{Inf} when the fit failed).}
+    \item{unfitres}{A data frame reporting the results on each selected item 
+   for which no successful fit is reached (one line per item) sorted in the ascending order of the adjusted p-values returned by function \code{itemselect}. The different columns correspond to the identifier of each item (\code{id}), the row number of this item in the initial data set (\code{irow}), the adjusted p-value of the selection step (\code{adjpvalue}), and code for the reason of the fitting failure (\code{cause},
+   equal to \code{"constant.model"} if the best fit model is a constant model or 
+   \code{"trend.in.residuals"} if the best fit model is rejected due to quadratic trend on residuals.)}
 
 }
 
 \seealso{
-    See \code{\link{nls}} for details about the non linear regression function.
+    See \code{\link{nls}} for details about the non linear regression function and 
+    \code{\link{targetplot}} to plot target items (even if non responsive or unfitted).
 }
 
 \references{ 
@@ -142,10 +160,21 @@ datafilename <- system.file("extdata", "transcripto_very_small_sample.txt", pack
 # Default plot
 plot(f)
 
+\donttest{
+# The same plot with log transformation of the doses
+plot(f, dose_log_transfo = TRUE)
+
+# The same plot in x log scale choosing x limits for plot
+if (require(ggplot2))
+plot(f, dose_log_transfo = TRUE) + 
+        scale_x_log10(limits = c(0.1, 10))
+
 # Plot of residuals as function of the dose
 plot(f, plot.type = "dose_residuals")
 
-\donttest{
+# Same plot of residuals with log transformation of the doses
+plot(f, plot.type = "dose_residuals", dose_log_transfo = TRUE)
+
 # plot of residuals as function of the fitted value
 plot(f, plot.type = "fitted_residuals")
 }
@@ -162,12 +191,19 @@ datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomic
 # Default plot
 plot(f)
 
-# Plot of the first 12 most responsive items
+# Plot of the fit of the first 12 most responsive items
 plot(f, items = 12)
 
 # Plot of the chosen items in the chosen order
 plot(f, items = c("301.2", "363.1", "383.1"))
+
+# Look at the table of results for successful fits
+head(f$fitres)
+
+# Look at the table of results for unsuccessful fits
+head(f$unfitres)
 }
+
 
 # (3) Comparison of parallel and non paralell implementations on a 
 #     larger selection of items

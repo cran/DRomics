@@ -12,6 +12,10 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
   # bootmethod <- match.arg(bootmethod, c("nonparam", "param"))
   bootmethod <- "nonparam"
   
+  if (niter < 1000)
+    warning("A small number of iterations (less than 1000) may not be sufficient
+            to ensure a good quality of bootstrap confidence intervals.")
+    
     parallel <- match.arg(parallel, c("no", "snow", "multicore"))
   if (parallel == "multicore" & .Platform$OS.type == "windows")
   {
@@ -292,7 +296,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           xextrboot <- eboot + (cboot - dboot)*bboot/(fboot*sqrt(2*pi)) 
           yextrboot <- fGauss5p(x = xextrboot, b = bboot, c = cboot, d = dboot, e = eboot, f = fboot)
 
-          deltapboot <- y0boot * xdiv100
+          deltapboot <- abs(y0boot) * xdiv100
           deltasdboot <- z * SDresboot
             
           resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
@@ -359,7 +363,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           xextrboot <-  exp(log(eboot) + (cboot - dboot)*bboot/(fboot*sqrt(2*pi))) 
           yextrboot <-  fLGauss5p(x = xextrboot, b = bboot, c = cboot, d = dboot, e = eboot, f = fboot) 
           
-          deltapboot <- y0boot * xdiv100
+          deltapboot <- abs(y0boot) * xdiv100
           deltasdboot <- z * SDresboot
           
           resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
@@ -449,7 +453,7 @@ print.bmdboot <- function(x, ...)
   nNA.BMDboot <- sum(x$res$nboot.successful < x$tol * x$niter)
   if (nNA.BMDboot == 0)
   {
-    cat("Bootstrap confidence interval computation was successful on ", nNA.BMDboot,
+    cat("Bootstrap confidence interval computation was successful on ", ntot ,
         "items among", ntot, ".\n")
   } else
   {
