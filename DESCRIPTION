@@ -1,6 +1,6 @@
 Package: DRomics
 Title: Dose Response for Omics
-Version: 2.1-2
+Version: 2.1-3
 Authors@R: c(person("Marie-Laure", "Delignette-Muller", role = "aut", email = "marielaure.delignettemuller@vetagro-sup.fr"),
              person("Elise", "Billoir", role = "aut", email = "elise.billoir@univ-lorraine.fr"),
              person("Floriane", "Larras", role = "ctb", email = "floriane.larras@ufz.de"),
@@ -17,11 +17,11 @@ URL: https://lbbe.univ-lyon1.fr/-DRomics-.html,
 Contact: Marie-Laure Delignette-Muller
         <marielaure.delignettemuller@vetagro-sup.fr>
 NeedsCompilation: no
-Packaged: 2020-09-22 13:19:24 UTC; aurelie
+Packaged: 2020-09-23 06:57:28 UTC; aurelie
 Author: Marie-Laure Delignette-Muller [aut],
   Elise Billoir [aut],
   Floriane Larras [ctb],
   Aurelie Siberchicot [aut, cre]
 Maintainer: Aurelie Siberchicot <aurelie.siberchicot@univ-lyon1.fr>
 Repository: CRAN
-Date/Publication: 2020-09-22 15:20:14 UTC
+Date/Publication: 2020-09-23 07:40:03 UTC
