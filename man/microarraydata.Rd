@@ -88,6 +88,9 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
     \item{data.beforenorm}{ the numeric matrix of responses of each item in each replicate
   (one line per item, one column per replicate) before normalization  }
 
+    \item{containsNA}{always at FALSE as microarray data are not allowed to contain 
+    NA values}
+
   The print of a \code{microarraydata} object gives the tested doses (or concentrations) 
   and number of replicates for each dose, the number of items, the identifiers 
   of the first 20 items (for check of good coding of data) and the normalization method.
@@ -97,7 +100,8 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
 \seealso{
     See \code{\link{read.table}} the function used to import data, 
     \code{\link{normalizeBetweenArrays}} for details about the normalization and 
-    \code{\link{RNAseqdata}} and \code{\link{metabolomicdata}} for other types of data.}
+    \code{\link{RNAseqdata}}, \code{\link{continuousomicdata}} and
+    \code{\link{continuousanchoringdata}} for other types of data.}
 
 \references{ 
 Ritchie ME, Phipson B, Wu D, Hu Y, Law CW, Shi W, and Smyth, GK (2015), \emph{limma powers differential expression analyses for RNA-sequencing and microarray studies}. Nucleic Acids Research 43, e47.

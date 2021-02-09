@@ -7,20 +7,31 @@ server <- function(input, output, session) {
   
   inTypeData <- reactive({input$typeData})
   
+  validateFile <- function(filename){
+    extFile <- tools::file_ext(filename)
+    validate(
+      need(extFile == "txt" | extFile == "csv", "Only .txt or .csv files are allowed.")
+    )
+  }
+  
   ## Input: file data
   filedata <- reactive({
     
     if(inTypeData() == 'microarraydata') {
       req(input$datafile_microarray)
+      validateFile(input$datafile_microarray)
       microarraydata(input$datafile_microarray$datapath, check = TRUE, norm.method = input$normMethod_microarray)
     } else if(inTypeData() == 'rnaseqdata') {
       req(input$datafile_rnaseq)
+      validateFile(input$datafile_rnaseq)
       RNAseqdata(input$datafile_rnaseq$datapath, check = TRUE, transfo.method = input$transfoMethod_rnaseq, round.counts = TRUE)
     } else if(inTypeData() == 'metabolomicdata') {
       req(input$datafile_metabolomic)
+      validateFile(input$datafile_metabolomic)
       metabolomicdata(input$datafile_metabolomic$datapath, check = TRUE)
     } else if(inTypeData() == 'continuousanchoringdata') {
       req(input$datafile_anchoring)
+      validateFile(input$datafile_anchoring)
       continuousanchoringdata(input$datafile_anchoring$datapath, check = TRUE)
     }
   })
@@ -43,10 +54,21 @@ server <- function(input, output, session) {
   
   inFDR <- reactive({as.numeric(input$FDR)})
   inSelectMethod <- reactive({input$selectMethod})
+  observe({shinyjs::disable("buttonDowloadItems")})
   
   output$printItemSelect <- renderPrint({ 
     signifitems <<- itemselect(filedata(), select.method = inSelectMethod(), FDR = inFDR())
     print(signifitems)
+    
+    shinyjs::enable("buttonDowloadItems")
+    output$buttonDowloadItems <- downloadHandler(
+      filename = function(){
+        paste0("items-", Sys.Date(), ".txt")
+      },
+      content = function(file) {
+        write.table(signifitems$omicdata$item[signifitems$selectindex] , file, sep = "\t", dec = ".")
+      }
+    )
   })
   
   
@@ -57,7 +79,8 @@ server <- function(input, output, session) {
   observe({
     if ((inTypeData() == 'microarraydata' & is.null(input$datafile_microarray)) |
         (inTypeData() == 'rnaseqdata' & is.null(input$datafile_rnaseq)) |
-        (inTypeData() == 'metabolomicdata' & is.null(input$datafile_metabolomic))) {
+        (inTypeData() == 'metabolomicdata' & is.null(input$datafile_metabolomic)) |
+        (inTypeData() == 'continuousanchoringdata' & is.null(input$datafile_anchoring))) {
       shinyjs::disable("buttonDrcfit")
     }else{
       shinyjs::enable("buttonDrcfit")
@@ -89,6 +112,7 @@ server <- function(input, output, session) {
         "drcfitplot.pdf"
       },
       content = function(file) {
+        plotfit2pdf(mydrcfit, plot.type = input$plottypeDrcfit, dose_log_transfo = as.logical(input$logdosescale), path2figs = tempdir())
         file.copy(paste0(tempdir(), "/drcfitplot.pdf"), file)
       },
       contentType = {"application/pdf"}
@@ -177,11 +201,19 @@ server <- function(input, output, session) {
     ## Output: plots downloading
     output$buttonPlotBmdcalc <- downloadHandler(
       filename = function(){
-        paste0("data-", Sys.Date(), ".pdf")
+        paste0("data-", Sys.Date(), ".", input$fileformat_bmdcalc)
       },
       content = function(file) {
+        
+        switch(input$fileformat_bmdcalc,
+               "pdf" = pdf(file),
+               "png" = png(file),
+               "jpeg" = jpeg(file),
+               "tiff" = tiff(file, compression = "lzw"),
+               "svg" = svg(file))
+        
+        
         myplottype <- input$plottype
-        pdf(file, width = 8, height = 8)
         print(
           
           if(myplottype == 'ecdfcolorgradient') {
@@ -217,8 +249,7 @@ server <- function(input, output, session) {
             
           })
         dev.off()
-      },
-      contentType = {"application/pdf"}
+      }
     )
   })
   
@@ -235,6 +266,8 @@ server <- function(input, output, session) {
       req(input$datafile_rnaseq)
     } else if(inTypeData() == 'metabolomicdata') {
       req(input$datafile_metabolomic)
+    } else if(inTypeData() == 'continuousanchoringdata') {
+      req(input$datafile_anchoring)
     }
     
     text <- c("library(DRomics)",
@@ -244,7 +277,10 @@ server <- function(input, output, session) {
                                      paste0("microarraydata('", input$datafile_microarray$name, "', check = TRUE, norm.method = '", input$normMethod_microarray, "')"), 
                                      ifelse(input$typeData == 'rnaseqdata', 
                                             paste0("RNAseqdata('", input$datafile_rnaseq$name, "', check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "', round.counts = TRUE)"), 
-                                            paste0("metabolomicdata('", input$datafile_metabolomic$name, "', check = TRUE)")))),
+                                            ifelse(input$typeData == 'metabolomicdata', 
+                                                   paste0("metabolomicdata('", input$datafile_metabolomic$name, "', check = TRUE)"),
+                                                   paste0("continuousanchoringdata('", input$datafile_anchoring$name, "', check = TRUE)")
+                                                   )))),
               "print(o)",
               "plot(o)",
               "",
@@ -301,6 +337,8 @@ server <- function(input, output, session) {
       req(input$datafile_rnaseq)
     } else if(inTypeData() == 'metabolomicdata') {
       req(input$datafile_metabolomic)
+    } else if(inTypeData() == 'continuousanchoringdata') {
+      req(input$datafile_anchoring)
     }
     
     text <- c("# Few lines of R script to go further using the package",

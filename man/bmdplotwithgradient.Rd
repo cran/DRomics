@@ -16,7 +16,7 @@ bmdplotwithgradient(extendedres, BMDtype = c("zSD", "xfold"),
                                    facetby, shapeby, npoints = 50, 
                                    line.size, point.size = 1,
                                    ncol4faceting, limits4colgradient,
-                                   lowercol = "darkgreen", uppercol = "darkred",
+                                   lowercol = "darkblue", uppercol = "darkred",
                                    add.label, label.size = 2,
                                    BMD_log_transfo = FALSE)
 }
@@ -153,6 +153,21 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
 bmdplotwithgradient(r$res, BMDtype = "zSD",
                       facetby = "trend", shapeby = "model") 
                       
+# same plot changing the names of the facets 
+levels(r$res$trend)
+levels(r$res$trend) <- c("bell shape", "decreasing", "increasing", "U shape")
+
+bmdplotwithgradient(r$res, BMDtype = "zSD",
+                      facetby = "trend", shapeby = "model")
+
+# same plot changing the labels of the legends 
+# and inversing the two guides
+if (require(ggplot2)) bmdplotwithgradient(r$res, BMDtype = "zSD",
+                      facetby = "trend", shapeby = "model") + 
+                      labs(col = "signal value", shape = "model") +
+                      guides(colour = guide_colourbar(order = 2),
+                      shape = guide_legend(order = 1))
+                      
 # (2)
 # Plot of BMD values with color dose-response gradient
 # faceted by metabolic pathway (from annotation of the selected items)
@@ -198,7 +213,7 @@ bmdplotwithgradient(extendedres, BMDtype = "zSD",
                       facetby = "path_class", 
                        shapeby = "trend",
                        line.size = 3, 
-                       lowercol = "darkblue", uppercol = "orange") 
+                       lowercol = "darkgreen", uppercol = "orange") 
 
 # (2.d) The same example with only lipid metabolism pathclass
 # and identification of the metabolites

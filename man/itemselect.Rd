@@ -12,7 +12,7 @@ a quadratic trend test, a linear trend test or an ANOVA-based test.
 itemselect(omicdata, select.method = c("quadratic", "linear", "ANOVA"), 
   FDR = 0.05, max.ties.prop = 0.2)   
 
-\method{print}{itemselect}(x, \dots)
+\method{print}{itemselect}(x, nfirstitems = 20, \dots)
 }
 
 \arguments{
@@ -33,12 +33,14 @@ an ANOVA-type test (see details for further explaination).}
 
 \item{x}{An object of class \code{"itemselect"}.}
 
+\item{nfirstitems}{The maximum number of selected items to print.}
+
 \item{\dots}{ further arguments passed to print function.}
 }
 
 \details{
 The selection of responsive items is performed using the \code{limma} package
-for microarray and metabolomic data, the \code{DESeq2} package for
+for microarray and continuous omics data (such as metabolomics), the \code{DESeq2} package for
 RNAseq data and the \code{lm} function for continuous anchoring data. 
 Three methods are proposed (as described below). Within \code{limma} those methods are implemented using functions \code{\link{lmFit}},  
 \code{\link{eBayes}} and \code{\link{topTable}} with p-values ajusted for multiple 
@@ -68,10 +70,11 @@ tests the global significance of a quadratic model describing the response as a 
 It is a variant of the linear trend method that aims at detecting monotonic and non monotonic trends from a dose-response designs, whatever the number of replicates per dose (default chosen method).
  }
  
-A filter on the proportion of tied values is also performed whatever the type of data, assuming 
+After the use of one this previously described tests, 
+a filter based on the proportion of tied values is also performed whatever the type of data, assuming 
 tied values correspond to a minimal common value at which non detections were imputed. 
 All items having a proportion of such tied minimal values above the input argument
-\code{max.ties.prop} are not selected.
+\code{max.ties.prop} are eliminated from the selection.
  
 }
 
@@ -84,7 +87,7 @@ All items having a proportion of such tied minimal values above the input argume
   \item{ selectindex }{ the corresponding vector of row indices of selected items in the object omicdata }
 
   \item{omicdata}{The corresponding object of class \code{"microarraydata"},
-  \code{"RNAseqdata"}, \code{"metabolomicdata"} or \code{"continuousanchoringdata"}
+  \code{"RNAseqdata"}, \code{"continuousomicdata"} or \code{"continuousanchoringdata"}
   given in input.}
 
   \item{select.method}{The selection method given in input.}
@@ -128,6 +131,10 @@ datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomic
 # 1.a using the quadratic trend test
 #
 (s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.05))
+print(s_quad, nfirstitems = 30)
+
+# to get the names of all the selected items
+(selecteditems <- s_quad$omicdata$item[s_quad$selectindex]) 
 
 \donttest{
 

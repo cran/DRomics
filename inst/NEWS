@@ -1,5 +1,34 @@
 === DRomics : Dose response for omics ===
 
+Version 2.2-0 
+=============
+NEW FEATURES
+- The second-order Akaike criterion (AICc) recommended to prevent overfitting
+with small number of data poinst in each dose-response crives was implemented
+and defined as the default option for the argument information.criterion in drcfit().
+- The example file of the package (?DRomics) was replaced by a vignette to help
+the use of the package and of the Shiny application.
+- Improvement of the computation of low BMD values for designs with a high
+ratio between the maximal and minimal (non null) tested doses, with the add
+of two arguments to bmdcalc, minBMD and ratio2switchinlog.
+- Add of two columns in the output of bmdcalc (BMR.zSD and BMR.xfold)
+- Add of a function plotfit2pdf() to plot all fits (or residual plots)
+in a pdf file, using the raw scale or the log scale of the dose and 
+removing of the option saveplot2pdf of drcfit().
+- Replacement of the class 'metabolomicdata' by the class 'continuousomicdata'
+and add of a function continuousomicdata() that is called by metabolomicdata()
+but could be used on other types of continuous omics data such as proteomics data.
+- default color changed for bmdplotwithgradient() (green replaced by blue for 
+color blind people)
+- Removing of three of the four datasets from Zou et al. 2017 to make the 
+package lighter
+- Add a test on residuals for heteroscedasticity and an output of drcfit: 
+residualtests
+
+BUG FIXES
+- gestion in RNAseqdata() of all the cases for which vst() may give a stop message.
+
+
 Version 2.1-0 
 =============
 NEW FEATURES
@@ -19,13 +48,16 @@ information on selected items for which the modelling step is not successful
 - Add of a function to plot raw data on target items optionally with fitted curves 
 for items which have be selected in step 2 and for which step 3 was successful
 (new function targetplot()).
-- Add of the argument transfo.blind in RNAseqdata() and fixing of a bug in RNAseqdata()
-that occured when using vst() with small datasets.
+- Add of the argument transfo.blind in RNAseqdata() 
 - Add of the argument free.y.scales in curvesplot() to enable free y scales in facets
 and dose_log_transfo to use an x log scale for plot and calculation of signal.
 - Add of examples in DRomics.Rd to help a multi-omics approach
 - Add of the argument round.counts to enable rounding of read counts that would come
 from Kallisto or Salmon.
+
+BUG FIXES
+- make the direct use of varianceStabilizingTransformation() automatic
+for small RNAseq data sets (low number of items: < 1000) to fix a bug in RNAseqdata() that occured when using vst() with small datasets.
 
 
 Version 2.0-1 

@@ -92,9 +92,11 @@ to finite values.
    the theoretical y range for x within the range of tested doses 
    (\code{yrange}) and for biphasic curves 
    the x value at which their extremum is reached (\code{xextrem})
-   and the corresponding y value (\code{yextrem}), the BMD-zSD value (\code{BMD.zSD}) and 
-   the BMD-xfold value (\code{BMD.xfold}), 
-   \code{BMD.zSD.lower} and  \code{BMD.zSD.upper}the lower and upper bounds of the 
+   and the corresponding y value (\code{yextrem}), the BMD-zSD value (\code{BMD.zSD})
+   with the corresponding BMR-zSD value (reached or not, \code{BMR.zSD}) and 
+   the BMD-xfold value (\code{BMD.xfold})
+   with the corresponding BMR-xfold value (reached or not, \code{BMR.xfold}), 
+   \code{BMD.zSD.lower} and  \code{BMD.zSD.upper} the lower and upper bounds of the 
    confidence intervals of the BMD-zSD value, 
    \code{BMD.xfold.lower} and  \code{BMD.xfold.upper} the lower and upper bounds of the
    confidence intervals of the BMD-xfold value and
@@ -127,11 +129,11 @@ Marie-Laure Delignette-Muller
 # (1) a toy example (a very small subsample of a microarray data set) 
 #
 datafilename <- system.file("extdata", "transcripto_very_small_sample.txt",
-package="DRomics")
+package = "DRomics")
 
 # to test the package on a small but not very small data set
 # use the following commented line
-# datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+# datafilename <- system.file("extdata", "transcripto_sample.txt", package = "DRomics")
 
 o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess")
 s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.001)

@@ -13,7 +13,7 @@ of argument \code{file} for the required format
 of data). 
 No transformation is provided in this function.
 If needed the pretreatment of data must be done before importation of data, 
-so that they can be directly modelled using a Gaussian 
+so that they can be directly modelled using a normal 
 error model. This strong hypothesis is required both for selection of responsive endpoints
 and for dose-reponse modelling.
 
@@ -75,6 +75,8 @@ the number of replicates for each dose, the number of endpoints.
     \item{data.mean}{ the numeric matrix of mean responses of each item per dose (mean 
     of the corresponding replicates) (one line per item, one column per unique value 
     of the dose}
+    
+    \item{containsNA}{ TRUE if the data set contains NA values}
 
   The print of a \code{continuousanchoringdata} object gives the tested doses (or concentrations) 
   and number of replicates for each dose, the number of items, the identifiers 
@@ -84,7 +86,7 @@ the number of replicates for each dose, the number of endpoints.
 
 \seealso{
     See  \code{\link{read.table}} the function used to import data, and
-    \code{\link{microarraydata}}, \code{\link{RNAseqdata}} and \code{\link{microarraydata}} for other types of data.}
+    \code{\link{microarraydata}}, \code{\link{RNAseqdata}} and \code{\link{continuousomicdata}} for other types of data.}
 
 \author{ 
 Marie-Laure Delignette-Muller

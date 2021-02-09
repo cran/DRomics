@@ -7,39 +7,40 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
 {
   # Checks
   if (!inherits(r, "bmdcalc"))
-    stop("Use only with 'bmdcalc' objects, created with the function bmdcalc")
+    stop("Use only with 'bmdcalc' objects, created with the function bmdcalc.")
   
   # bootmethod <- match.arg(bootmethod, c("nonparam", "param"))
   bootmethod <- "nonparam"
   
   if (niter < 1000)
-    warning("A small number of iterations (less than 1000) may not be sufficient
-            to ensure a good quality of bootstrap confidence intervals.")
-    
+    warning(strwrap(prefix = "\n", initial = "\n", 
+      "A small number of iterations (less than 1000) may not be sufficient
+      to ensure a good quality of bootstrap confidence intervals."))
+  
     parallel <- match.arg(parallel, c("no", "snow", "multicore"))
   if (parallel == "multicore" & .Platform$OS.type == "windows")
   {
     parallel <- "snow"
-    warning("As the multicore option is not supported on Windows it was replaced by snow")
+    warning(strwrap(prefix = "\n", initial = "\n", 
+      "As the multicore option is not supported on Windows it was replaced by snow."))
   }
   if ((parallel == "snow" | parallel == "multicore") & missing(ncpus)) 
-    stop("You have to specify the number of available processors to parallelize 
-         the bootstrap")
+    stop("You have to specify the number of available processors to parallelize the bootstrap.")
   if (parallel != "no") progressbar <- FALSE
   
   if (progressbar)
-    cat("The bootstrap may be long if the number of items and the number of bootstrap iterations is high.\n")
+    cat(strwrap("The bootstrap may be long if the number of items and the number of bootstrap iterations is high."), fill = TRUE)
 
   i.items <- match(items, r$res$id)
   nitems <- length(items)
   
   if (!is.numeric(tol) | (tol > 1) | (tol < 0))
     stop("Wrong argument 'tol'. If not omitted it must be a number between 0 and 1 (the proportion
-         of failure of model fit among bootstrap samples).")
+    of failure of model fit among bootstrap samples).")
 
   if (!is.numeric(conf.level) | (conf.level >= 1) | (conf.level <= 0))
     stop("Wrong argument 'conf.level'. If not omitted it must be a number between 0 and 1 
-         (the confidence level of the bootstrap confidence intervals).")
+    (the confidence level of the bootstrap confidence intervals).")
   prob.lower <- (1 - conf.level) / 2
   prob.upper <- conf.level + prob.lower
   
@@ -48,7 +49,10 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
   xdiv100 <- r$x/100
     
   dose <- r$omicdata$dose
+  dosemin <- min(dose[dose != 0])
   dosemax <- max(dose)
+  minBMD <- r$minBMD
+  ratio2switchinlog <- r$ratio2switchinlog
   
   # progress bar
   if (progressbar)
@@ -71,6 +75,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
     # dataset
     datai <- r$omicdata$data[resitem$irow, ]
     dset <- data.frame(signal = datai, dose = dose)
+    # removing lines with NA values for the signal
+    dset <- dset[complete.cases(dset$signal), ]
     ndata <- nrow(dset)
 
     ############## Model expo ###########
@@ -79,8 +85,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       b1 <- lestimpar$b
       d1 <- lestimpar$d
       e1 <- lestimpar$e
-      fitted1 <- fExpo(x = dose, d = d1, b = b1, e = e1)
-      resid1 <- datai - fitted1
+      fitted1 <- fExpo(x = dset$dose, d = d1, b = b1, e = e1)
+      resid1 <- dset$signal - fitted1
       
       dsetboot <- dset
       fboot <- function(i)
@@ -114,9 +120,9 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           y0boot <- dboot
           ydosemaxboot <- fExpo(x = dosemax, b = bboot, d = dboot, e = eboot)
           ypboot <- y0boot * ( 1 + xdiv100*sign(eboot * bboot))
-          BMDpboot <- invExpo(ypboot, b= bboot, d = dboot, e = eboot)
+          BMDpboot <- pmax(invExpo(ypboot, b= bboot, d = dboot, e = eboot), minBMD)
           ysdboot <- y0boot + z*SDresboot * sign(eboot * bboot)
-          BMDsdboot <- invExpo(ysdboot, b= bboot, d = dboot, e = eboot)
+          BMDsdboot <- pmax(invExpo(ysdboot, b= bboot, d = dboot, e = eboot), minBMD)
           return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
         }
       } # end fboot
@@ -130,8 +136,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       c1 <- lestimpar$c
       d1 <- lestimpar$d
       e1 <- lestimpar$e
-      fitted1 <- fHill(x = dose, b = b1, c = c1, d = d1,  e = e1)
-      resid1 <- datai - fitted1
+      fitted1 <- fHill(x = dset$dose, b = b1, c = c1, d = d1,  e = e1)
+      resid1 <- dset$signal - fitted1
       
       dsetboot <- dset
       fboot <- function(i)
@@ -157,9 +163,9 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           y0boot <- dboot
           ydosemaxboot <- fHill(x = dosemax, b = bboot, c = cboot, d = dboot, e = eboot)
           ypboot <- y0boot * ( 1 + xdiv100*sign(cboot * dboot))
-          BMDpboot <- invHill(ypboot, b= bboot, c = cboot, d = dboot, e = eboot)
+          BMDpboot <- pmax(invHill(ypboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
           ysdboot <- y0boot + z*SDresboot * sign(cboot * dboot)
-          BMDsdboot <- invHill(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot)
+          BMDsdboot <- pmax(invHill(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
 
           return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
         }
@@ -174,8 +180,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       c1 <- lestimpar$c
       d1 <- lestimpar$d
       e1 <- lestimpar$e
-      fitted1 <- fLGauss5p(x = dose, b = b1, c = c1, d = d1, e = e1, f = 0)
-      resid1 <- datai - fitted1
+      fitted1 <- fLGauss5p(x = dset$dose, b = b1, c = c1, d = d1, e = e1, f = 0)
+      resid1 <- dset$signal - fitted1
       
       dsetboot <- dset
       fboot <- function(i)
@@ -201,9 +207,9 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           y0boot <- dboot
           ydosemaxboot <- fLGauss5p(x = dosemax, b = bboot, c = cboot, d = dboot, e = eboot, f = 0)
           ypboot <- y0boot * ( 1 + xdiv100*sign(cboot * dboot))
-          BMDpboot <- invLprobit(ypboot, b= bboot, c = cboot, d = dboot, e = eboot)
+          BMDpboot <- pmax(invLprobit(ypboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
           ysdboot <- y0boot + z*SDresboot * sign(cboot * dboot)
-          BMDsdboot <- invLprobit(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot)
+          BMDsdboot <- pmax(invLprobit(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
           
           return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
         }
@@ -217,8 +223,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
     {
       b1 <- lestimpar$b
       d1 <- lestimpar$d
-      fitted1 <- flin(x = dose, b = b1, d = d1)
-      resid1 <- datai - fitted1
+      fitted1 <- flin(x = dset$dose, b = b1, d = d1)
+      resid1 <- dset$signal - fitted1
       
       dsetboot <- dset
       fboot <- function(i)
@@ -238,9 +244,9 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
         y0boot <- dboot
         ydosemaxboot <- flin(x = dosemax, b = bboot, d = dboot)
         ypboot <- y0boot * ( 1 + xdiv100*sign(bboot))
-        BMDpboot <- invlin(ypboot, b= bboot, d = dboot)
+        BMDpboot <- pmax(invlin(ypboot, b= bboot, d = dboot), minBMD)
         ysdboot <- y0boot + z*SDresboot * sign(bboot)
-        BMDsdboot <- invlin(ysdboot, b= bboot, d = dboot)
+        BMDsdboot <- pmax(invlin(ysdboot, b= bboot, d = dboot), minBMD)
           
         return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
       } # end fboot
@@ -255,8 +261,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       d1 <- lestimpar$d
       e1 <- lestimpar$e
       f1 <- lestimpar$f
-      fitted1 <- fGauss5p(x = dose, c = c1, d = d1, b = b1, e = e1, f = f1)
-      resid1 <- datai - fitted1
+      fitted1 <- fGauss5p(x = dset$dose, c = c1, d = d1, b = b1, e = e1, f = f1)
+      resid1 <- dset$signal - fitted1
        
       dsetboot <- dset
       fboot <- function(i)
@@ -300,13 +306,17 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           deltasdboot <- z * SDresboot
             
           resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
-                               dosemax = dosemax, ydosemax = ydosemaxboot, func = fGauss5pBMR, 
-                               b = bboot, c = cboot, d = dboot, e = eboot, g = fboot)
+                               dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
+                             func = fGauss5pBMR, func_xinlog = fGauss5pBMR_xinlog,
+                               b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
+                             minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
           BMDpboot <- resBMDp$BMD
             
           resBMDsd <- calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
-                                dosemax = dosemax, ydosemax = ydosemaxboot, func = fGauss5pBMR, 
-                                b = bboot, c = cboot, d = dboot, e = eboot, g = fboot)
+                                dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
+                              func = fGauss5pBMR, func_xinlog = fGauss5pBMR_xinlog,
+                                b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
+                              minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
           BMDsdboot <- resBMDsd$BMD
           return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
         }
@@ -322,8 +332,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       d1 <- lestimpar$d
       e1 <- lestimpar$e
       f1 <- lestimpar$f
-      fitted1 <- fLGauss5p(x = dose, c = c1, d = d1, b = b1, e = e1, f = f1)
-      resid1 <- datai - fitted1
+      fitted1 <- fLGauss5p(x = dset$dose, c = c1, d = d1, b = b1, e = e1, f = f1)
+      resid1 <- dset$signal - fitted1
 
       dsetboot <- dset
       fboot <- function(i)
@@ -367,13 +377,17 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
           deltasdboot <- z * SDresboot
           
           resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
-                             dosemax = dosemax, ydosemax = ydosemaxboot, func = fLGauss5pBMR, 
-                             b = bboot, c = cboot, d = dboot, e = eboot, g = fboot)
+                             dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
+                             func = fLGauss5pBMR, func_xinlog = fLGauss5pBMR_xinlog,
+                             b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
+                             minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
           BMDpboot <- resBMDp$BMD
           
           resBMDsd <- calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
-                              dosemax = dosemax, ydosemax = ydosemaxboot, func = fLGauss5pBMR, 
-                              b = bboot, c = cboot, d = dboot, e = eboot, g = fboot)
+                              dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
+                              func = fLGauss5pBMR, func_xinlog = fLGauss5pBMR_xinlog,
+                              b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
+                              minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
           BMDsdboot <- resBMDsd$BMD
           return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
         }
@@ -387,8 +401,8 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
     nboot.successful <- niter - sum(sapply(l1, is.null))
     if(nboot.successful < niter * tol) 
     {
-      # warning(paste("Procedure aborted: the fit only converged for", nboot.successful, 
-      #               "iterations during bootstrapping for item ", items[i]))
+      # warning(strwrap(paste0("Procedure aborted: the fit only converged for ", nboot.successful, 
+      #               " iterations during bootstrapping for item ", items[i], ".")), fill = TRUE)
       return(c(NA, NA, NA, NA, nboot.successful))
     } else
     {
@@ -447,36 +461,34 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
 print.bmdboot <- function(x, ...) 
 {
   if (!inherits(x, "bmdboot"))
-    stop("Use only with 'bmdboot' objects")
+    stop("Use only with 'bmdboot' objects.")
   
   ntot <- nrow(x$res)
   nNA.BMDboot <- sum(x$res$nboot.successful < x$tol * x$niter)
   if (nNA.BMDboot == 0)
   {
-    cat("Bootstrap confidence interval computation was successful on ", ntot ,
-        "items among", ntot, ".\n")
+    cat(strwrap(paste0("Bootstrap confidence interval computation was successful on ", ntot, " items among", ntot, ".")), fill = TRUE)
   } else
   {
-    cat("Bootstrap confidence interval computation failed on", nNA.BMDboot,
-        "items among", ntot, 
-        "due to lack of convergence of the model fit for a fraction of the bootstrapped samples greater than",
-        x$tol, ".\n")
+    cat(strwrap(paste0("Bootstrap confidence interval computation failed on ", nNA.BMDboot, " items among ", ntot, 
+                       " due to lack of convergence of the model fit for a fraction of the 
+                       bootstrapped samples greater than ", x$tol, ".")), fill = TRUE)
   }
   
   nInf.BMD.zSD.upper <- sum(is.infinite(x$res$BMD.zSD.upper))
   nInf.BMD.xfold.upper <- sum(is.infinite(x$res$BMD.xfold.upper))
-  cat("For", nInf.BMD.zSD.upper, "BMD.zSD values and", nInf.BMD.xfold.upper,
-      "BMD.xfold values among", ntot, 
-      "at least one bound of the 95 percent confidence interval could not be
-      computed due to some bootstrapped BMD values not reachable due to model asymptotes 
-      or reached outside the range of tested doses (bounds coded Inf)).\n")
-  }
+  cat(strwrap(paste0("For ", nInf.BMD.zSD.upper, " BMD.zSD values and ", nInf.BMD.xfold.upper,
+                     " BMD.xfold values among ", ntot, 
+                     " at least one bound of the 95 percent confidence interval could not be 
+                     computed due to some bootstrapped BMD values not reachable due to model asymptotes 
+                     or reached outside the range of tested doses (bounds coded Inf)).")), fill = TRUE)
+}
 
 plot.bmdboot <- function(x, BMDtype = c("zSD", "xfold"), remove.infinite = TRUE,
                          by = c("none", "trend", "model", "typology"), CI.col = "blue",  ...) 
 {
   if (!inherits(x, "bmdboot"))
-    stop("Use only with 'bmdboot' objects")
+    stop("Use only with 'bmdboot' objects.")
   BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
   by <- match.arg(by, c("none", "trend", "model", "typology"))  
   
@@ -536,12 +548,12 @@ plot.bmdboot <- function(x, BMDtype = c("zSD", "xfold"), remove.infinite = TRUE,
   {
     if (remove.infinite)
     {
-      warning(nremoved,
-    " BMD values for which lower and upper bounds were coded NA or with lower or upper infinite bounds were removed before plotting")
+      warning(strwrap(prefix = "\n", initial = "\n", paste0(nremoved,
+        " BMD values for which lower and upper bounds were coded NA or with lower or upper infinite bounds were removed before plotting.")))
     } else
     {
-      warning(nremoved,
-    " BMD values for which lower and upper bounds were coded NA or with lower and upper infinite bounds were removed before plotting")
+      warning(strwrap(prefix = "\n", initial = "\n", paste0(nremoved,
+        " BMD values for which lower and upper bounds were coded NA or with lower and upper infinite bounds were removed before plotting.")))
     }
   }
   
