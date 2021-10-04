@@ -10,7 +10,7 @@ Fits dose reponse models to responsive items.
 }
 
 \usage{
-drcfit(itemselect, sigmoid.model = c("Hill", "log-probit"),
+drcfit(itemselect, 
   information.criterion = c("AICc", "BIC", "AIC"), postfitfilter = TRUE,
   progressbar = TRUE, parallel = c("no", "snow", "multicore"), ncpus)
 
@@ -27,9 +27,6 @@ plotfit2pdf(x, items,
 
 \arguments{
 \item{itemselect}{An object of class \code{"itemselect"} returned by the function \code{itemselect}.}
-
-\item{sigmoid.model}{The chosen sigmoid model, \code{"Hill"} (default
-  choice) or \code{"log-probit"}.}
 
 \item{information.criterion}{The information criterion used to select the best fit model, \code{"AICc"} as recommended and default
   choice (the corrected version of the AIC that is recommended
@@ -93,8 +90,8 @@ as a function of the dose (in rank-scale) were also eliminated (the best fit is 
 not reliable in such cases). Each retained item is classified in a twelve class typology depending of the
 chosen model and of its parameter values : 
   \itemize{
-  \item H.inc for increasing Hill curves (or lP.inc if \code{sigmoid.model = "log-probit"}),
-  \item H.dec for decreasing Hill curves (or lP.dec if \code{sigmoid.model = "log-probit"}),
+  \item H.inc for increasing Hill curves,
+  \item H.dec for decreasing Hill curves,
   \item L.inc for increasing linear curves,
   \item L.dec for decreasing linear curves,
   \item E.inc.convex for increasing convex exponential curves,
@@ -238,7 +235,11 @@ table(f$unfitres$cause)
 
 # (3) Comparison of parallel and non paralell implementations on a larger selection of items
 #
-s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.05)
-system.time(f1 <- drcfit(s_quad, progressbar = TRUE))
-system.time(f2 <- drcfit(s_quad, progressbar = FALSE, parallel = "snow", ncpus = 2))
+if(!requireNamespace("parallel", quietly = TRUE)) {
+  if(parallel::detectCores() > 1) {
+    s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.05)
+    system.time(f1 <- drcfit(s_quad, progressbar = TRUE))
+    system.time(f2 <- drcfit(s_quad, progressbar = FALSE, parallel = "snow", ncpus = 2))
+}}
+
 }}

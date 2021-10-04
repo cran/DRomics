@@ -3,22 +3,22 @@
 # form an extended results dataframe (e.g. with annotation of items)
 # with optionnal use of columns for shape and or facet 
 bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
-                                   xmin, xmax, y0shift = TRUE, 
-                                   facetby, shapeby, npoints = 50, 
-                                   line.size, point.size = 1,
-                                   ncol4faceting, limits4colgradient,
-                                   lowercol = "darkblue", uppercol = "darkred",
-                                   add.label = FALSE, label.size = 2,
-                                    BMD_log_transfo = FALSE)
+                                xmin, xmax, y0shift = TRUE, 
+                                facetby, facetby2, shapeby, npoints = 50, 
+                                line.size, point.size = 1,
+                                ncol4faceting, limits4colgradient,
+                                lowercol = "darkblue", uppercol = "darkred",
+                                add.label = FALSE, label.size = 2,
+                                BMD_log_transfo = FALSE)
 {
   BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
-
+  
   if (missing(extendedres) | !is.data.frame(extendedres))
     stop("The first argument of bmdplotwithgradient must be a dataframe 
     (see ?bmdplotwithgradient for details).")
   
   cnames <- colnames(extendedres)
- 
+  
   if (BMDtype == "zSD")
   {  
     if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "BMD.zSD"), cnames)))
@@ -46,7 +46,7 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
       if (xmin == 0)
       {
         warning(strwrap(prefix = "\n", initial = "\n",
-          "When using a log scale for the BMD plot, it is not possible to fix xmin at 0. 
+                        "When using a log scale for the BMD plot, it is not possible to fix xmin at 0. 
           If the default value does not suit you, you can define a strictly positive value for xmin."))
         xmin <- min(BMD2plot$x[is.finite(BMD2plot$x) & BMD2plot$x != 0])
       }
@@ -60,12 +60,15 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
   {
     xmax <- max(BMD2plot$x[is.finite(BMD2plot$x)])
   }
-
+  
   
   if (!missing(shapeby))
   {
     if (!is.character(shapeby)) 
       stop("shapeby should be a character string for the name of the column coding for the point shape.")
+    if (!is.element(shapeby, cnames))
+      stop("shapeby should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
     BMD2plot$shapeby <- extendedres[, shapeby]
   }
   
@@ -75,21 +78,39 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
   {
     if (!is.character(facetby)) 
       stop("facetby should be a character string for the name of the column used for facetting.")
+    if (!is.element(facetby, cnames))
+      stop("facetby should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
     BMD2plot$facetby <- extendedres[, facetby]
-
-    if (missing(line.size)) line.size <- 24 / max(table(BMD2plot$facetby)) 
-
-    uniqueby <- unique(BMD2plot$facetby)
+    
+    if (!missing(facetby2)) 
+    {
+      if (!is.character(facetby2)) 
+        stop("facetby2 should be a character string for the name of the column used for facetting.")
+      if (!is.element(facetby2, cnames))
+        stop("facetby2 should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
+      BMD2plot$facetby2 <- extendedres[, facetby2]
+      BMD2plot$group <- paste(extendedres[, facetby], extendedres[, facetby2], sep = "_")
+    } else
+    {
+      BMD2plot$group  <-  BMD2plot$facetby
+    }
+    
+    if (missing(line.size)) line.size <- 24 / max(table(BMD2plot$group))
+    
+    uniqueby <- unique(BMD2plot$group)
     n.uniqueby <- length(uniqueby)
     BMD2plot$ECDF <- rep(0, ntot) # initialization
     for (i in 1:n.uniqueby)
     {
-      indi <- which(BMD2plot$facetby == uniqueby[i])
+      indi <- which(BMD2plot$group == uniqueby[i])
       ntoti <- length(indi)
       BMD2plot$ECDF[indi] <- (rank(BMD2plot$x[indi], ties.method = "first") - 0.5) / ntoti
     }
     g <- ggplot(data = BMD2plot, mapping = aes_(x = quote(x), y = quote(ECDF), 
-                                                label = quote(id))) + facet_wrap(~ facetby) 
+                                                label = quote(id))) 
+    if (missing(facetby2)) g <- g + facet_wrap(~ facetby) else g <- g + facet_grid(facetby2 ~ facetby)
     
   } else
   {
@@ -99,7 +120,7 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
     g <- ggplot(data = BMD2plot, mapping = aes_(x = quote(x), y = quote(ECDF),
                                                 label = quote(id)))
   }
-
+  
   # Calculation of theoretical signal to color the lines
   if (BMD_log_transfo)
   {
@@ -123,55 +144,63 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
       b <- extendedres$b[i]
       d <- extendedres$d[i]
       curves2plot$signal[(i-1)*npoints + 1:npoints] <- flin(x2plot, b = extendedres$b[i], 
-                                                       d = extendedres$d[i]) - extendedres$y0[i]*y0shift
+                                                            d = extendedres$d[i]) - extendedres$y0[i]*y0shift
     } else
       if (modeli == "exponential")
       {
         curves2plot$signal[(i-1)*npoints + 1:npoints] <- fExpo(x2plot, b = extendedres$b[i], 
-                                                          d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
+                                                               d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
       } else
         if (modeli == "Hill")
         {
           curves2plot$signal[(i-1)*npoints + 1:npoints] <- fHill(x2plot, b = extendedres$b[i], c = extendedres$c[i],
-                                                            d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
+                                                                 d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
         } else
           if (modeli == "Gauss-probit")
           {
             curves2plot$signal[(i-1)*npoints + 1:npoints] <- fGauss5p(x2plot, b = extendedres$b[i], c = extendedres$c[i],
-                                                                 d = extendedres$d[i], e = extendedres$e[i], 
-                                                                 f = extendedres$f[i]) - extendedres$y0[i]*y0shift
+                                                                      d = extendedres$d[i], e = extendedres$e[i], 
+                                                                      f = extendedres$f[i]) - extendedres$y0[i]*y0shift
           } else
             if ((modeli == "log-Gauss-probit") | (modeli == "log-probit"))
             {
               curves2plot$signal[(i-1)*npoints + 1:npoints] <- fLGauss5p(x2plot, b = extendedres$b[i], c = extendedres$c[i],
-                                                                    d = extendedres$d[i], e = extendedres$e[i], 
-                                                                    f = extendedres$f[i]) - extendedres$y0[i]*y0shift
+                                                                         d = extendedres$d[i], e = extendedres$e[i], 
+                                                                         f = extendedres$f[i]) - extendedres$y0[i]*y0shift
             }
   }
-
+  
   # no shape no facet
-  if (missing(facetby))
+  if (!missing(facetby))
   {
-    gg <- g + geom_line(data = curves2plot, 
-              mapping = aes_(x = quote(x), y = quote(ECDF), 
-                             group = quote(id), color = quote(signal)),
-              size = line.size) 
-  } else
-  { 
     curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
-    gg <- g + geom_line(data = curves2plot, 
-                        mapping = aes_(x = quote(x), y = quote(ECDF), 
-                                       group = quote(id), color = quote(signal)),
-                        size = line.size)
-    if (missing(ncol4faceting))
+    if (!missing(facetby2)) 
     {
-        gg <- gg + facet_wrap(~ facetby) 
-    } else
-    {
-      gg <- gg + facet_wrap(~ facetby, ncol = ncol4faceting) 
+      curves2plot$facetby2 <- rep(extendedres[, facetby2], each = npoints)
     }
-    
-  } 
+  }
+  gg <- g + geom_line(data = curves2plot, 
+                      mapping = aes_(x = quote(x), y = quote(ECDF), 
+                                     group = quote(id), color = quote(signal)),
+                      size = line.size) 
+  if (!missing(facetby))
+  {
+    if (!missing(facetby2)) 
+    {
+      gg <- gg + facet_grid(facetby2 ~ facetby) 
+    }
+    else
+    {
+      if (missing(ncol4faceting))
+      {
+        gg <- gg + facet_wrap(~ facetby) 
+      } else
+      {
+        gg <- gg + facet_wrap(~ facetby, ncol = ncol4faceting) 
+      }
+    }
+  }
+  
   # Add of the color gradient
   if (missing(limits4colgradient))
   {
@@ -197,7 +226,7 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
   if (!missing(shapeby)) 
   {
     gg <- gg + geom_point(data = BMD2plot, mapping = aes_(shape = quote(shapeby)),
-                        size = point.size)
+                          size = point.size)
   } else
   {
     gg <- gg + geom_point(data = BMD2plot, size = point.size)
@@ -208,7 +237,7 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
   {
     if (!missing(shapeby))
       warning(strwrap(prefix = "\n", initial = "\n",
-        "The type of points will not be seen when points are replaced by labels.
+                      "The type of points will not be seen when points are replaced by labels.
         You should omit it in this case."))
     gg <- gg + geom_label(size = label.size)
   }
@@ -217,6 +246,6 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
     gg <- gg + scale_x_log10()
   
   gg <- gg + xlab("BMD")
-    
+  
   return(gg)
 }

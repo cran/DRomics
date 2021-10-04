@@ -1,7 +1,8 @@
 # Plot of fitted curves using columns of on extended dataframe to optionnally code 
 # for color and or facet 
 curvesplot <- function(extendedres, xmin = 0, xmax, y0shift = TRUE, 
-                       facetby, free.y.scales = FALSE, colorby, removelegend = FALSE,  
+                       facetby, facetby2, free.y.scales = FALSE, 
+                       ncol4faceting, colorby, removelegend = FALSE,  
                         npoints = 500, line.size = 0.2, line.alpha = 1,
                        dose_log_transfo = FALSE)
 {
@@ -41,6 +42,37 @@ curvesplot <- function(extendedres, xmin = 0, xmax, y0shift = TRUE,
   curves2plot <- data.frame(x = rep(x2plot, ns), 
                             id = rep(extendedres$id, each = npoints),
                             y = numeric(length = N))
+  
+  if (!missing(facetby)) 
+  {
+    if (!is.character(facetby)) 
+      stop("facetby should be a character string for the name of the column used for facetting.")
+    if (!is.element(facetby, cnames))
+      stop("facetby should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
+    curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
+    
+    if (!missing(facetby2)) 
+    {
+      if (!is.character(facetby2)) 
+        stop("facetby2 should be a character string for the name of the column used for facetting.")
+      if (!is.element(facetby2, cnames))
+        stop("facetby2 should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
+      curves2plot$facetby2 <- rep(extendedres[, facetby2], each = npoints)
+    }     
+  }
+  
+  if (!missing(colorby))
+  {
+    if (!is.character(colorby)) 
+      stop("colorby should be a character string for the name of the column coding for the point color.")
+    if (!is.element(colorby, cnames))
+      stop("colorby should be a character string corresponding to the name of a column of
+           extendedres, the dataframe given in input.")
+  }
+  
+    
   for (i in 1:ns)
   {
     modeli <- extendedres$model[i]
@@ -84,33 +116,45 @@ curvesplot <- function(extendedres, xmin = 0, xmax, y0shift = TRUE,
     # facet only
     if (missing(colorby))
     { 
-      if (!is.character(facetby)) 
-        stop("facetby should be a character string for the name of the column used for facetting.")
       curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
       gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id))) +
-        geom_line(size = line.size, alpha = line.alpha) + 
-        facet_wrap(~ facetby, scales = scales.arg) 
+        geom_line(size = line.size, alpha = line.alpha) 
+      # + 
+      #   facet_wrap(~ facetby, scales = scales.arg) 
     } else
       # color only
       if (missing(facetby))
       {
-        if (!is.character(colorby)) 
-          stop("colorby should be a character string for the name of the column used for coloring curves.")
         curves2plot$colorby <- rep(extendedres[, colorby], each = npoints)
         gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id), colour = quote(colorby))) +
           geom_line(size = line.size, alpha = line.alpha)  
       } else
         # color and facet
       {
-        if (!is.character(facetby)) 
-          stop("facetby should be a character string for the name of the column used for facetting.")
-        if (!is.character(colorby)) 
-          stop("colorby should be a character string for the name of the column used for coloring curves.")
         curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
         curves2plot$colorby <- rep(extendedres[, colorby], each = npoints)
         gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id), colour = quote(colorby))) +
-          geom_line(size = line.size, alpha = line.alpha) + facet_wrap(~ facetby, scales = scales.arg)  
+          geom_line(size = line.size, alpha = line.alpha)   
       }
+  if (!missing(facetby))
+  {
+    if (!missing(facetby2)) 
+    {
+      gg <- gg + facet_grid(facetby2 ~ facetby, scales = scales.arg) 
+    }
+    else
+    {
+      if (missing(ncol4faceting))
+      {
+        gg <- gg + facet_wrap(~ facetby, scales = scales.arg) 
+      } else
+      {
+        gg <- gg + facet_wrap(~ facetby, scales = scales.arg, ncol = ncol4faceting) 
+      }
+    }
+  }
+  
+  
   if (removelegend) gg <- gg + theme(legend.position = "none") 
   
   if (dose_log_transfo)

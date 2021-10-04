@@ -1,6 +1,6 @@
 Package: DRomics
 Title: Dose Response for Omics
-Version: 2.2-0
+Version: 2.3-0
 Authors@R: c(person("Marie-Laure", "Delignette-Muller", role = "aut", email = "marielaure.delignettemuller@vetagro-sup.fr"),
              person("Elise", "Billoir", role = "aut", email = "elise.billoir@univ-lorraine.fr"),
              person("Floriane", "Larras", role = "ctb", email = "floriane.larras@inrae.fr"),
@@ -14,16 +14,17 @@ License: GPL (>= 2)
 VignetteBuilder: knitr
 BuildVignettes: true
 Encoding: UTF-8
-URL: https://lbbe.univ-lyon1.fr/-DRomics-.html,
+URL: https://lbbe.univ-lyon1.fr/fr/dromics,
         https://github.com/aursiber/DRomics
 Contact: Marie-Laure Delignette-Muller
         <marielaure.delignettemuller@vetagro-sup.fr>
+BugReports: https://github.com/aursiber/DRomics/issues
 NeedsCompilation: no
-Packaged: 2021-02-09 14:32:26 UTC; siberchicot
+Packaged: 2021-09-29 14:08:33 UTC; siberchicot
 Author: Marie-Laure Delignette-Muller [aut],
   Elise Billoir [aut],
   Floriane Larras [ctb],
   Aurelie Siberchicot [aut, cre]
 Maintainer: Aurelie Siberchicot <aurelie.siberchicot@univ-lyon1.fr>
 Repository: CRAN
-Date/Publication: 2021-02-09 17:50:09 UTC
+Date/Publication: 2021-10-04 08:00:05 UTC

@@ -21,7 +21,7 @@ head(Zhou_kidney_pce)
 
 # Import the text file just to see what will be automatically imported
 datafilename <- system.file("extdata", "RNAseq_sample.txt", package = "DRomics")
-# for your local file datafilename would be just "yourchosenname.txt"
+# for your local file datafilename choose the name: "yourchosenname.txt"
 d <- read.table(file = datafilename, header = FALSE)
 nrow(d)
 head(d)
@@ -122,6 +122,18 @@ annotres <- merge(x = res, y = annot, by.x = "id", by.y = "metab.code")
 head(annotres)
 
 ## -----------------------------------------------------------------------------
+bmdplot(annotres, BMDtype = "zSD", add.CI = TRUE, 
+                    facetby = "path_class", 
+                    colorby = "trend") + labs(col = "trend")
+
+## ---- eval = FALSE------------------------------------------------------------
+#  ecdfplotwithCI(variable = annotres$BMD.zSD,
+#                 CI.lower = annotres$BMD.zSD.lower,
+#                 CI.upper = annotres$BMD.zSD.upper,
+#                 by = annotres$path_class,
+#                 CI.col = annotres$trend) + labs(col = "trend")
+
+## -----------------------------------------------------------------------------
 bmdplotwithgradient(annotres, BMDtype = "zSD",
                     facetby = "path_class", 
                     shapeby = "trend") + labs(shape = "trend")
@@ -145,16 +157,12 @@ bmdplotwithgradient(annotres_lipid, BMDtype = "zSD",
 
 
 ## -----------------------------------------------------------------------------
-ecdfplotwithCI(variable = annotres$BMD.zSD, 
-               CI.lower = annotres$BMD.zSD.lower, 
-               CI.upper = annotres$BMD.zSD.upper, 
-               by = annotres$path_class,
-               CI.col = annotres$trend) + labs(col = "trend")
+sensitivityplot(annotres, BMDtype = "zSD",
+                    group = "path_class",
+                 BMDsummary = "first.quartile") 
 
 ## -----------------------------------------------------------------------------
-ecdfquantileplot(variable = annotres$BMD.zSD, 
-                 by = annotres$path_class,
-                 quantile.prob = 0.25) 
+trendplot(annotres, group = "path_class") 
 
 ## -----------------------------------------------------------------------------
 LMres <- annotres[annotres$path_class == "Lipid metabolism", ]
@@ -195,9 +203,12 @@ par(las = 2, mar = c(4,13,1,1))
 barplot(t(t.pathways), beside = TRUE, horiz = TRUE, 
         cex.names = 0.7, legend.text = TRUE, 
         main = "Frequencies of pathways")
+par(original.par)
 
 ## -----------------------------------------------------------------------------
 (t.prop.pathways <- prop.table(t.pathways, margin = 2)) 
+original.par <- par()
+par(las = 2, mar = c(4,13,1,1))
 barplot(t(t.prop.pathways), beside = TRUE, horiz = TRUE, 
         cex.names = 0.7, legend.text = TRUE, 
         main = "Proportion of pathways")
@@ -220,24 +231,47 @@ if (require(ggplot2))
 }
 
 ## -----------------------------------------------------------------------------
-# with color coding for molecular level
-ecdfplotwithCI(variable = extendedres$BMD.zSD, 
-               CI.lower = extendedres$BMD.zSD.lower, 
-               CI.upper = extendedres$BMD.zSD.upper, 
-               by = extendedres$path_class,
-               CI.col = extendedres$level) + labs(col = "Molecular level")
+bmdplot(extendedres, BMDtype = "zSD", 
+                    facetby = "path_class", 
+                    colorby = "level") + labs(col = "molecular level")
 
 ## -----------------------------------------------------------------------------
-ecdfplotwithCI(variable = extendedres$BMD.zSD, 
-               CI.lower = extendedres$BMD.zSD.lower, 
-               CI.upper = extendedres$BMD.zSD.upper, 
-               by = extendedres$level)
+chosen_path_class <- c("Membrane transport", "Lipid metabolism", "Energy metabolism")
+selectedres <- extendedres[extendedres$path_class %in% chosen_path_class, ]
+bmdplot(selectedres, BMDtype = "zSD", add.CI = TRUE, 
+                    facetby = "path_class", 
+                    facetby2 = "level") + labs(col = "trend")
+
+## -----------------------------------------------------------------------------
+chosen_path_class <- c("Membrane transport", "Lipid metabolism", "Energy metabolism")
+selectedres <- extendedres[extendedres$path_class %in% chosen_path_class, ]
+bmdplotwithgradient(selectedres, BMDtype = "zSD",
+               facetby = "path_class", facetby2 = "level")
+
+## -----------------------------------------------------------------------------
+sensitivityplot(extendedres, BMDtype = "zSD",
+                group = "path_class", colorby = "level",
+                BMDsummary = "first.quartile") 
+
+## -----------------------------------------------------------------------------
+# Preliminary optional alphabetic ordering of path_class groups
+extendedres$path_class <- factor(extendedres$path_class, 
+                levels = sort(levels(extendedres$path_class), decreasing = TRUE))
+trendplot(extendedres, group = "path_class", facetby = "level") 
 
 ## -----------------------------------------------------------------------------
 # Plot of the dose-response curves for a specific metabolic pathway
 # in this example the "lipid metabolism" pathclass
 LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
 curvesplot(LMres, facetby = "level", free.y.scales = TRUE, npoints = 100, line.size = 1,
+           colorby = "trend",
+           xmin = 0, xmax = 8) + labs(col = "DR_trend")
+
+## -----------------------------------------------------------------------------
+# Plot of the dose-response curves for a specific metabolic pathway
+# in this example the "lipid metabolism" pathclass
+curvesplot(selectedres, facetby = "path_class", facetby2 = "level",
+           free.y.scales = TRUE, npoints = 100, line.size = 1,
            colorby = "trend",
            xmin = 0, xmax = 8) + labs(col = "DR_trend")
 
