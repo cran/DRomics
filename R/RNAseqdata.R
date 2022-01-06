@@ -1,6 +1,6 @@
 ### import, check normalize and transform RNAseq data
 
-RNAseqdata <- function(file, check = TRUE, 
+RNAseqdata <- function(file, backgrounddose, check = TRUE, 
                        transfo.method = c("rlog", "vst"), 
                        transfo.blind = TRUE, round.counts = FALSE)
 {
@@ -63,7 +63,6 @@ RNAseqdata <- function(file, check = TRUE,
   
   raw.counts <- data
   (dose <- as.vector(unlist(d[1, 2:ncold])))
-  fdose <- as.factor(dose)
   
   if(!transfo.blind)
   {
@@ -126,7 +125,18 @@ RNAseqdata <- function(file, check = TRUE,
   row.names(data) <- item <- as.character(d[2:nrowd, 1])
   (nitems <- nrow(data))
   
+  if (!missing(backgrounddose))
+  {
+    dose <- dose * (dose > backgrounddose)
+  }
+  
   # control of the design
+  if (!any(dose == 0))
+    stop(strwrap(prefix = "\n", initial = "\n",
+                 "DRomics cannot be used on a design with no dose at zero. 
+            In case of observational data, to prevent calculation of BMDs by extrapolation, 
+            doses considered as corresponding to the background exposition (control) must 
+                 be fixed at 0. You can use the argument backgrounddose for that purpose."))
   if (any(dose < 0))
     stop("DRomics cannot be used with negative values of doses.")
   design <- table(dose, dnn = "")
@@ -142,6 +152,7 @@ RNAseqdata <- function(file, check = TRUE,
       a dose-response design with at least six different tested doses."))
   
   # calculation of the means per dose
+  fdose <- as.factor(dose)
   tdata <- t(data)
   calcmean <- function(i)
   {

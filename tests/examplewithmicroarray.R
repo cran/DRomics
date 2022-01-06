@@ -52,6 +52,37 @@ if (visualize)
   plot(f, items = 12, plot.type = "fitted_residuals", dose_log_transfo = TRUE) 
 }
 
+if (visualize)
+{
+  # evaluate the impact of preventsfitsoutofrange
+  datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomics")
+  (o1 <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess"))
+  (s_quad1 <- itemselect(o1, select.method = "quadratic", FDR = 0.001))
+
+  (f1 <- drcfit(s_quad1, 
+                preventsfitsoutofrange = FALSE,
+                enablesfequal0inGP  = FALSE,
+                enablesfequal0inLGP  = FALSE,
+                progressbar = TRUE))
+  (f1bis <- drcfit(s_quad1, 
+                   preventsfitsoutofrange = TRUE,
+                   enablesfequal0inGP  = FALSE,
+                   enablesfequal0inLGP  = FALSE,
+                   progressbar = TRUE))
+  (f1ter <- drcfit(s_quad1, 
+                   preventsfitsoutofrange = TRUE,
+                   enablesfequal0inGP  = TRUE,
+                   enablesfequal0inLGP  = TRUE,
+                   progressbar = TRUE))
+  
+  (idremovedinf1bis <- f1$fitres$id[!is.element(f1$fitres$id, f1bis$fitres$id)])
+
+  (idchanged <- f1bis$fitres$id[which(f1bis$fitres$model != f1ter$fitres$model | 
+                                        f1bis$fitres$f != f1ter$fitres$f)])
+# no impact on this dataset  
+}
+
+
 
 # calculation of benchmark doses
 # options in shiny : z (numerical positive value), x (numerical positive value : percentage)

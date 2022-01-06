@@ -56,7 +56,7 @@ ui <- fluidPage(
                                            a("this web page", href = "https://lbbe.univ-lyon1.fr/fr/dromics", TARGET="_blank", style="color:#f28d0f;"), "."),
                                         h4("You can find help about the DRomics Shiny App and the DRomics package in a ",
                                            a("vignette", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_vignette_0.pdf", TARGET="_blank", style="color:#f28d0f;"), " and a ",
-                                           a("cheat sheet", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_cheat_sheet.pdf", TARGET="_blank", style="color:#f28d0f;"), "."
+                                           a("cheat sheet", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_cheat_sheet_0.pdf", TARGET="_blank", style="color:#f28d0f;"), "."
                                            )
                         )),
                         hr(style='width: 70%;'),
@@ -122,133 +122,130 @@ ui <- fluidPage(
              ####### STEP 1 #####################################################################
              ####################################################################################
              tabPanel(HTML("<font face=verdana size=3 color=#9c5c16>Step 1</font>"),
+                      br(), HTML("<font face=verdana size=5 color=#9c5c16><b>IMPORT, CHECK AND PRETREATMENT OF OMICS DATA</b></font>"), br(), br(), br(),
                       fixedRow(
-                        column(12, 
-                               br(), HTML("<font face=verdana size=5 color=#9c5c16><b>IMPORT, CHECK AND PRETREATMENT OF OMICS DATA</b></font>"), br(), br(), br(),
-                               
-                               fixedRow(
-                                 
-                                 ###### Select type of data 
-                                 sidebarPanel(
-                                   style = "background-color: #F5aa4c;",
-                                   width = 4,
-                                   radioButtons('typeData', 
-                                                "What kind of data do you use?",
-                                                choices = c('microarray data (in log scale)' = 'microarraydata', 
-                                                            'RNAseq data (in raw counts)' = 'rnaseqdata',
-                                                            'metabolomics data (in log scale)' = 'metabolomicdata',
-                                                            'anchoring continuous data (in a scale that enables the use of a normal error model)' = 'continuousanchoringdata'),
-                                                selected = 'microarraydata'), 
-                                   br()),
-                                 
-                                 ###### For micro-array data (default)
-                                 conditionalPanel(
-                                   condition = "input.typeData == 'microarraydata'",
-                                   
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     fileInput('datafile_microarray', 
-                                               'Select an input file',
-                                               accept = c('.csv', '.txt')),
-                                     h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
-                                     h5("See ", a("here", href = "DRomicspkg/transcripto_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'transcripto_sample.txt'), " an example file")
-                                   ),
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     radioButtons('normMethod_microarray', 
-                                                  'Select a method to normalize the data',
-                                                  choices = c('cyclic loess' = 'cyclicloess',
-                                                              'quantile' = 'quantile',
-                                                              'scale' = 'scale',
-                                                              'no normalization' = 'none'),
-                                                  selected = 'cyclicloess'),
-                                     
-                                     h5("See ", a("here", href = "informations_norm_methods.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the normalization methods")
-                                   )
-                                 ),
-                                 
-                                 ###### For RNA-seq data
-                                 conditionalPanel(
-                                   condition = "input.typeData == 'rnaseqdata'",
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     fileInput('datafile_rnaseq', 
-                                               'Select an input file',
-                                               accept = c('.csv', '.txt')),
-                                     h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
-                                     h5("See ", a("here", href = "DRomicspkg/RNAseq_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'RNAseq_sample.txt'), " an example file"),
-                                     icon("exclamation-triangle"), "Be aware that counts are automatically rounded to ensure compatibility of counts from Kallisto or Salmon with the tool."
-                                   ),
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     radioButtons('transfoMethod_rnaseq', 
-                                                  'Select a method to transform the data',
-                                                  choices = c('regularized logarithm (rlog)' = 'rlog',
-                                                              'variance stabilizing transformation (vst)' = 'vst'),
-                                                  selected = 'rlog'),
-                                     
-                                     h5("See ", a("here", href = "informations_transfo_methods.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the transformation methods")
-                                   )
-                                 ),
-                                 
-                                 ###### For metabolomic data
-                                 conditionalPanel(
-                                   condition = "input.typeData == 'metabolomicdata'",
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     fileInput('datafile_metabolomic', 
-                                               'Select an input file',
-                                               accept = c('.csv', '.txt')),
-                                     h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
-                                     h5("See ", a("here", href = "DRomicspkg/metabolo_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'metabolo_norm.txt'), " an example file")
-                                   ),
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     icon("exclamation-triangle"), "We recommend you to check that your metabolomics data were correctly pretreated before importation. In particular data (metabolomic signal) should have been log-transformed, without replacing 0 values by NA values (consider using the half minimum method instead for example).",
-                                     h5("See ", a("here", href = "informations_metabolo_pretreatment.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " more information about metabolomics data pretreatment")
-                                   )
-                                 ),
-                                 
-                                 ###### For continuous anchoring data
-                                 conditionalPanel(
-                                   condition = "input.typeData == 'continuousanchoringdata'",
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     fileInput('datafile_anchoring', 
-                                               'Select an input file',
-                                               accept = c('.csv', '.txt')),
-                                     h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
-                                     h5("See ", a("here", href = "DRomicspkg/apical_anchoring.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'apical_anchoring.txt'), " an example file")
-                                   ),
-                                   sidebarPanel(
-                                     style = "background-color: #F5aa4c;",
-                                     width = 4,
-                                     icon("exclamation-triangle"), 
-                                     "We recommend you to check that your anchoring data are continuous and expressed in a scale that enables the use of a normal error model (a transformation of data may be needed for some endpoints). If this assumption is not respected, results of selection and further steps may be inaccurate."
-                                   )
-                                 )
-                                 
-                               ),
-                               
-                               
-                               fixedRow(
-                                 mainPanel(
-                                   width = 12,
-                                   verbatimTextOutput('printOmicData'),
-                                   br(),
-                                   withSpinner(plotOutput("plotOmicData", width = "100%", height = "900px"), type = 4, color = '#9c5c16'),
-                                   br()
-                                 )
-                               )
+                        
+                        ###### Select type of data                                
+                        sidebarPanel(
+                          style = "background-color: #F5aa4c;",
+                          width = 3,
+                          radioButtons('typeData', 
+                                       "What kind of data do you use?",
+                                       choices = c('microarray data (in log scale)' = 'microarraydata', 
+                                                   'RNAseq data (in raw counts)' = 'rnaseqdata',
+                                                   'metabolomics data (in log scale)' = 'metabolomicdata',
+                                                   'anchoring continuous data (in a scale that enables the use of a normal error model)' = 'continuousanchoringdata'),
+                                       selected = 'microarraydata'),
+                          hr(), 
+                          
+                          ###### For micro-array data (default)
+                          conditionalPanel(
+                            condition = "input.typeData == 'microarraydata'",
+                            tags$style(HTML('#bgdose_help1 {margin-top: 26px}')),
+                            fileInput('datafile_microarray',
+                                      'Select an input file',
+                                      accept = c('.csv', '.txt')),
+                            h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
+                            h5("See ", a("here", href = "DRomicspkg/transcripto_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'transcripto_sample.txt'), " an example file"),
+                            br(),
+                            splitLayout(cellWidths = c("40%", "60%"),
+                                        textInput('bgdose_microarray', "Background dose", 0),
+                                        bsButton("bgdose_help1", label = "", icon = icon("question"), size = "small"),
+                                        bsPopover("bgdose_help1", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
+                            ),
+                            hr(), 
+                            radioButtons('normMethod_microarray',
+                                         'Select a method to normalize the data',
+                                         choices = c('cyclic loess' = 'cyclicloess',
+                                                     'quantile' = 'quantile',
+                                                     'scale' = 'scale',
+                                                     'no normalization' = 'none'),
+                                         selected = 'cyclicloess'),
+                            h5("See ", a("here", href = "informations_norm_methods.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the normalization methods")
+                          ),
+                          
+                          ###### For RNA-seq data
+                          conditionalPanel(
+                            condition = "input.typeData == 'rnaseqdata'",
+                            tags$style(HTML('#bgdose_help2 {margin-top: 26px}')),
+                            fileInput('datafile_rnaseq',
+                                      'Select an input file',
+                                      accept = c('.csv', '.txt')),
+                            h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
+                            h5("See ", a("here", href = "DRomicspkg/RNAseq_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'RNAseq_sample.txt'), " an example file"),
+                            icon("exclamation-triangle"), "Be aware that counts are automatically rounded to ensure compatibility of counts from Kallisto or Salmon with the tool.",
+                            br(), br(),
+                            splitLayout(cellWidths = c("40%", "60%"),
+                                        textInput('bgdose_rnaseq', "Background dose", 0),
+                                        bsButton("bgdose_help2", label = "", icon = icon("question"), size = "small"),
+                                        bsPopover("bgdose_help2", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
+                            ),
+                            hr(), 
+                            radioButtons('transfoMethod_rnaseq',
+                                         'Select a method to transform the data',
+                                         choices = c('regularized logarithm (rlog, may take a few minutes)' = 'rlog',
+                                                     'variance stabilizing transformation (vst)' = 'vst'),
+                                         selected = 'rlog'),
+                            h5("See ", a("here", href = "informations_transfo_methods.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the transformation methods")
+                          ),
+                          
+                          ###### For metabolomic data
+                          conditionalPanel(
+                            condition = "input.typeData == 'metabolomicdata'",
+                            tags$style(HTML('#bgdose_help3 {margin-top: 26px}')),
+                            fileInput('datafile_metabolomic',
+                                      'Select an input file',
+                                      accept = c('.csv', '.txt')),
+                            h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
+                            h5("See ", a("here", href = "DRomicspkg/metabolo_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'metabolo_norm.txt'), " an example file"),
+                            br(),
+                            splitLayout(cellWidths = c("40%", "60%"),
+                                        textInput('bgdose_metabolomic', "Background dose", 0),
+                                        bsButton("bgdose_help3", label = "", icon = icon("question"), size = "small"),
+                                        bsPopover("bgdose_help3", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
+                            ),
+                            hr(), 
+                            icon("exclamation-triangle"), "We recommend you to check that your metabolomics data were correctly pretreated before importation. In particular data (metabolomic signal) should have been log-transformed, without replacing 0 values by NA values (consider using the half minimum method instead for example).",
+                            h5("See ", a("here", href = "informations_metabolo_pretreatment.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " more information about metabolomics data pretreatment")
+                          ),
+                          
+                          ###### For continuous anchoring data
+                          conditionalPanel(
+                            condition = "input.typeData == 'continuousanchoringdata'",
+                            tags$style(HTML('#bgdose_help4 {margin-top: 26px}')),
+                            fileInput('datafile_anchoring',
+                                      'Select an input file',
+                                      accept = c('.csv', '.txt')),
+                            h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
+                            h5("See ", a("here", href = "DRomicspkg/apical_anchoring.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'apical_anchoring.txt'), " an example file"),
+                            br(), 
+                            splitLayout(cellWidths = c("40%", "60%"),
+                                        textInput('bgdose_anchoring', "Background dose", 0),
+                                        bsButton("bgdose_help4", label = "", icon = icon("question"), size = "small"),
+                                        bsPopover("bgdose_help4", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
+                            ),
+                            hr(), 
+                            icon("exclamation-triangle"),
+                            "We recommend you to check that your anchoring data are continuous and expressed in a scale that enables the use of a normal error model (a transformation of data may be needed for some endpoints). If this assumption is not respected, results of selection and further steps may be inaccurate."
+                          ),
+                          
+                          hr(), 
+                          fixedRow(
+                            column(12, align="center",
+                                   actionButton("buttonRunStep1", "Run", icon = icon("file-import"), style='font-size:200%')
+                            )
+                          )
+                        ),
+                        
+                        mainPanel(
+                          width = 9,
+                          verbatimTextOutput('printOmicData'),
+                          br(),
+                          withSpinner(plotOutput("plotOmicData", width = "100%", height = "900px"), type = 4, color = '#9c5c16'),
+                          br()
                         )
-                      )),
+                      )
+             ),
              
              
              ####################################################################################
@@ -270,14 +267,21 @@ ui <- fluidPage(
                                    h5("See ", a("here", href = "informations_select_methods.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the selection methods"),
                                    br(),
                                    textInput('FDR', label = 'False Discovery Rate (FDR) for the Benjamini-Hochberg correction of p-values', value = "0.05"),
-                                   h5("See ", a("here", href = "informations_FDR_choice.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the choice of FDR")
-                                 )
-                               ),
-                               fixedRow(
+                                   h5("See ", a("here", href = "informations_FDR_choice.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the choice of FDR"),
+                                   hr(),
+                                   fixedRow(
+                                     column(12, align="center",
+                                            actionButton("buttonRunStep2", "Run", icon = icon("fas fa-cog"), style='font-size:200%')
+                                     )
+                                   ), br(), 
+                                   fixedRow(
+                                     column(12, align="center",
+                                            downloadButton("buttonDowloadItems", "Download all items", icon = icon("fas fa-download"), style='font-size:110%')
+                                     ))
+                                 ),
                                  mainPanel(
-                                   width = 12,
-                                   withSpinner(verbatimTextOutput('printItemSelect'), type = 4, color = '#9c5c16'),
-                                   downloadButton("buttonDowloadItems", "Download all items", icon = icon("fas fa-download"))
+                                   width = 9,
+                                   withSpinner(verbatimTextOutput('printItemSelect'), type = 4, color = '#9c5c16')
                                  )
                                )
                         )
@@ -288,62 +292,51 @@ ui <- fluidPage(
              ####### STEP 3 #####################################################################
              ####################################################################################
              tabPanel(HTML("<font face=verdana size=3 color=#9c5c16>Step 3</font>"),
-                      fluidRow(
+                      fixedRow(
                         column(12, 
                                br(), HTML("<font face=verdana size=5 color=#9c5c16><b>DOSE RESPONSE MODELLING FOR RESPONSIVE ITEMS</b></font>"), br(), br(), br(),
-                               fluidRow(
+                               fixedRow(
                                  sidebarPanel(
                                    style = "background-color: #F5aa4c;",
-                                   width = 8,
-                                   fluidRow(
-                                     column(width = 6, 
-                                            "Click this button each time you update a setting in previous steps:",
-                                            br(), 
-                                            h5("See ", a("here", href = "informations_modelling_procedure.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the dose reponse modelling procedure")
-                                     ),
-                                     column(width = 2, actionButton("buttonDrcfit", "Fit", icon = icon("chart-bar"), style='font-size:250%')),
-                                     column(width = 4,
-                                            sidebarPanel(
-                                              style = "background-color: #FFFFFF;",
-                                              width = 12,
-                                              icon("exclamation-triangle"),
-                                              "These ongoing calculations can take from minutes to about an hour. Your patience should be proportional to the size of your data and the chosen FDR."
-                                            )
-                                     )
-                                   )
-                                 )
-                               ),
-                               
-                               fluidRow(
-                                 mainPanel(
-                                   width = 12,
-                                   verbatimTextOutput('printDrcfit'),
+                                   width = 3,
+                                   "Click this button each time you update a setting in previous steps:",
+                                   br(), br(),
+                                   fixedRow(
+                                     column(12, align="center",
+                                            actionButton("buttonDrcfit", "Fit", icon = icon("chart-bar"), style='font-size:250%')
+                                     )),
                                    br(),
-                                   fluidRow(
-                                     column(width = 3,
-                                            radioButtons('plottypeDrcfit', 
-                                                         'Plot type', inline = TRUE, 
-                                                         choices = c('dose / fitted' = 'dose_fitted',
-                                                                     'dose / residuals' = 'dose_residuals',
-                                                                     'fitted / residuals' = 'fitted_residuals'),
-                                                         selected = "dose_fitted")),
-                                     column(width = 2,
-                                            radioButtons('logdosescale',
-                                                         'Log dose-scale', inline = TRUE,
-                                                         choices = c('yes' = 'TRUE',
-                                                                     'no' = 'FALSE'),
-                                                         selected = "FALSE")),
-                                     column(width = 3,
-                                            useShinyjs(),
+                                   h5("See ", a("here", href = "informations_modelling_procedure.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the dose reponse modelling procedure"),
+                                   icon("exclamation-triangle"),
+                                   "These ongoing calculations can take from minutes to about an hour. Your patience should be proportional to the size of your data and the chosen FDR.",
+                                   hr(), 
+                                   radioButtons('plottypeDrcfit', 
+                                                'Plot type', inline = TRUE, 
+                                                choices = c('dose / fitted' = 'dose_fitted',
+                                                            'dose / residuals' = 'dose_residuals',
+                                                            'fitted / residuals' = 'fitted_residuals'),
+                                                selected = "dose_fitted"),
+                                   radioButtons('logdosescale',
+                                                'Log dose-scale', inline = TRUE,
+                                                choices = c('yes' = 'TRUE',
+                                                            'no' = 'FALSE'),
+                                                selected = "FALSE"),
+                                   hr(), 
+                                   useShinyjs(),
+                                   fixedRow(
+                                     column(12, align="center",
                                             hidden(
                                               downloadButton("buttonDownloadDrcfitplot", 
                                                              HTML("Download all the fitted<br/>dose-response plots"), 
-                                                             style = 'background-color:#F5aa4c; color:#000000; border-color:#9d9d9d; font-size:110%;', 
+                                                             style = 'font-size:110%;', 
                                                              icon = icon("fas fa-download"))
-                                            )
-                                     )
-                                   ),
-                                   br(),
+                                            )))
+                                 ),
+                                 
+                                 mainPanel(
+                                   width = 9,
+                                   verbatimTextOutput('printDrcfit'),
+                                   br(), br(),
                                    withSpinner(plotOutput("plotDrcfit", width = "100%", height = "900px"), type = 4, color = '#9c5c16'),
                                    br(), br()
                                  )
@@ -362,26 +355,35 @@ ui <- fluidPage(
                                fixedRow(
                                  sidebarPanel(
                                    style = "background-color: #F5aa4c;",
-                                   width = 2,
+                                   width = 3,
                                    textInput('zbmdcalc', label = 'z value for BMD-zSD', value = "1"),
                                    textInput('xbmdcalc', label = 'x value for BMD-xfold (in %)', value = "10"),
                                    h5("See ", a("here", href = "informations_z_x.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the BMD-zSD and the BMD-xfold"),
                                    hr(),
-                                   downloadButton("buttonResBmdcalc", "Download results", icon = icon("fas fa-download")),
+                                   fixedRow(
+                                     column(12, align="center",
+                                            actionButton("buttonRunStep4", "Calculate", icon = icon("fas fa-calculator"), style='font-size:200%')
+                                     )
+                                   ), br(), 
+                                   fluidRow(
+                                     column(12, align="center",
+                                            downloadButton("buttonResBmdcalc", "Download results", icon = icon("fas fa-download"))
+                                     )
+                                   ), br(),
                                    h5("See ", a("here", href = "informations_bmdcalc_results.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the provided results")
                                  ),
                                  mainPanel(
-                                   width = 10,
-                                   verbatimTextOutput('printBmdcalc')
+                                   width = 9,
+                                   withSpinner(verbatimTextOutput('printBmdcalc'), type = 4, color = '#9c5c16')
                                  )),
                                
                                br(), br(),
                                fixedRow(
                                  sidebarPanel(
                                    style = "background-color: #F5aa4c;",
-                                   width = 2,
+                                   width = 3,
                                    radioButtons('BMDtype', 
-                                                'BMD type',
+                                                'BMD type', inline = TRUE,
                                                 choices = c('zSD' = 'zSD',
                                                             'xfold' = 'xfold')),
                                    br(),
@@ -428,7 +430,7 @@ ui <- fluidPage(
                                                             'model' = 'model',
                                                             'typology' = 'typology'),
                                                 selected = 'none'),
-                                   h5("See ", a("here", href = "informations_modelling_procedure.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about typologies"),
+                                   h5("See ", a("here", href = "informations_modelling_procedure.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about models and trends"),
                                    hr(),
                                    radioButtons('fileformat_bmdcalc', 
                                                 'File format',
@@ -438,14 +440,48 @@ ui <- fluidPage(
                                                             'tiff' = 'tiff',
                                                             'svg' = 'svg'),
                                                 selected = 'pdf'),
-                                   downloadButton("buttonPlotBmdcalc", "Download figure", icon = icon("fas fa-download"))
+                                   fluidRow(
+                                     column(12, align="center",
+                                            downloadButton("buttonPlotBmdcalc", "Download figure", icon = icon("fas fa-download"))
+                                     )
+                                   )
                                  ),
                                  mainPanel(
-                                   width = 10,
-                                   plotOutput("plotBmdcalc", width = "100%", height = "900px"),
+                                   width = 9,
+                                   plotOutput("plotBmdcalc", width = "100%", height = "900px")
+                                 )
+                               ),
+                               
+                               br(), br(),
+                               fixedRow(
+                                 sidebarPanel(
+                                   style = "background-color: #F5aa4c;",
+                                   width = 3,
+                                   radioButtons('BMDtype_plot2pdf', 
+                                                'BMD type', inline = TRUE,
+                                                choices = c('zSD' = 'zSD',
+                                                            'xfold' = 'xfold')),
+                                   radioButtons('logbmd_plot2pdf',
+                                                'Log-dose scale', inline = TRUE,
+                                                choices = c('yes' = 'TRUE',
+                                                            'no' = 'FALSE'),
+                                                selected = "FALSE"),
+                                   hr(),
+                                   fluidRow(
+                                     column(12, align="center", 
+                                            downloadButton("buttonDownloadDrcfitplotBMD", 
+                                                           HTML("Download all the<br/>fitted dose-response<br/>plots with BMD"), 
+                                                           icon = icon("fas fa-download"))
+                                     )
+                                   )
+                                 ),
+                                 mainPanel(
+                                   width = 9,
+                                   plotOutput("plotDrcfitBMD", width = "100%", height = "900px"),
                                    br(), br()
                                  )
                                )
+                               
                         )
                       )),
              
@@ -457,9 +493,11 @@ ui <- fluidPage(
                       fixedRow(
                         column(8, 
                                br(), HTML("<font face=verdana size=5 color=#9c5c16><b>R CODE TO GO FURTHER</b></font>"), br(), br(), br(),
-                               tags$blockquote("To see what more you can do using the R package, we recommend you to consult ", 
-                                               a("here", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_vignette_0.pdf", TARGET="_blank", style="color:#f28d0f;"),
-                                               "the vignette of the package."), 
+                               tags$blockquote("To see what more you can do using the R package, we recommend you to consult the ", 
+                                               a("vignette", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_vignette_0.pdf", TARGET="_blank", style="color:#f28d0f;"),
+                                               " and the ", 
+                                               a("cheat sheet", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_cheat_sheet_0.pdf", TARGET="_blank", style="color:#f28d0f;"),
+                                               " of the package."), 
                                br(), 
                                downloadButton("buttonDownRCode", "Download R Code", icon = icon("fas fa-download"), style = 'background-color:#e6e6e6; color:#000000; border-color:#9d9d9d;'), br(), br(),
                                verbatimTextOutput('printRCode'), br(), br(),

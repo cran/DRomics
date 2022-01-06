@@ -77,6 +77,42 @@ if (visualize)
              facetby = "id")
 }
 
+if (visualize)
+{
+  # evaluate the impact of preventsfitsoutofrange, enablesfequal0inGP, enablesfequal0inlGP
+  data(Zhou_kidney_pce)
+  (o1 <- RNAseqdata(Zhou_kidney_pce, check = TRUE, transfo.method = "rlog"))
+  s_quad1 <- itemselect(o1, select.method = "quadratic", FDR = 0.1)
+  (f1 <- drcfit(s_quad1, 
+                preventsfitsoutofrange = FALSE,
+                enablesfequal0inGP  = FALSE,
+                enablesfequal0inLGP  = FALSE,
+                progressbar = TRUE))
+  (f1bis <- drcfit(s_quad1, 
+                preventsfitsoutofrange = TRUE,
+                enablesfequal0inGP  = FALSE,
+                enablesfequal0inLGP  = FALSE,
+                progressbar = TRUE))
+  (f1ter <- drcfit(s_quad1, 
+                   preventsfitsoutofrange = TRUE,
+                   enablesfequal0inGP  = TRUE,
+                   enablesfequal0inLGP  = TRUE,
+                   progressbar = TRUE))
+  
+  (idremovedinf1bis <- f1$fitres$id[!is.element(f1$fitres$id, f1bis$fitres$id)])
+  targetplot(items = idremovedinf1bis, f1) 
+  
+  (idchanged <- f1bis$fitres$id[which(f1bis$fitres$model != f1ter$fitres$model | 
+                                        f1bis$fitres$f != f1ter$fitres$f)])
+  targetplot(items = idchanged, f1bis, dose_log_transfo = TRUE)
+  targetplot(items = idchanged, f1ter, dose_log_transfo = TRUE)
+  
+  f1bis$fitres[f1bis$fitres$id %in% idchanged, ]
+  f1ter$fitres[f1ter$fitres$id %in% idchanged, ]
+  
+  
+}
+
 
 # calculation of benchmark doses
 # options in shiny : z (numerical positive value), x (numerical positive value : percentage)

@@ -195,6 +195,11 @@ startvalGauss4pnls <- function(xm, ym, Ushape)
   startval <- list(b = b, d = d, e = e, f = f)
 }
 
+### probit model
+formprobit <- as.formula(signal ~ d + (c - d) * pnorm((dose-e)/b)) 
+
+
+
 # for plot
 
 fGauss5p <- function(x, b, c, d, e, f)
@@ -216,6 +221,52 @@ fGauss5pBMR_xinlog <- function(xinlog, b, c, d, e, g, threshold)
   g * exp(-0.5 * ((x-e)/b)^2) + # gaussian part
     d + (c - d) * pnorm((x-e)/b) - threshold # probit part
   
+}
+
+fprobit <- function(x, b, c, d, e) 
+{
+  d + (c - d) * pnorm((x - e)/b)
+}
+
+## inverse probit (X for an y value)
+invprobit <- function(y, b, c, d, e)
+{
+  if ( ((d < c) & (y > c)) | ((d > c) & (y < c)) )
+    return(NaN) else
+      return(e + b *qnorm((y - d) / (c - d)))
+}
+
+
+fGauss5poutofrange <- function(fit, signalmin, signalmax)
+# TRUE if the fit gives an extremum value out of the signal range 
+# function that takes the result of nls as first argument
+# to be used before the choice of the best model
+{
+  par <- coef(fit)
+  b.i <- par["b"]
+  c.i <- par["c"]
+  d.i <- par["d"]
+  e.i <- par["e"]
+  f.i <- par["f"]
+  xextr.i <- e.i + (c.i - d.i)*b.i / (f.i*sqrt(2*pi)) 
+  yextr.i <- fGauss5p(xextr.i, b = b.i, c = c.i, d = d.i, e = e.i, f = f.i)
+  outofrange <- (yextr.i > signalmax) | (yextr.i < signalmin)
+}
+
+fGauss4poutofrange <- function(fit, signalmin, signalmax)
+  # TRUE if the fit gives an extremum value out of the signal range 
+  # function that takes the result of nls as first argument
+  # to be used before the choice of the best model
+{
+  par <- coef(fit)
+  b.i <- par["b"]
+  c.i <- par["d"]
+  d.i <- par["d"]
+  e.i <- par["e"]
+  f.i <- par["f"]
+  xextr.i <- e.i + (c.i - d.i)*b.i / (f.i*sqrt(2*pi)) 
+  yextr.i <- fGauss5p(xextr.i, b = b.i, c = c.i, d = d.i, e = e.i, f = f.i)
+  outofrange <- (yextr.i > signalmax) | (yextr.i < signalmin)
 }
 
 
@@ -267,55 +318,57 @@ startvalLGauss4pnls <- function(xm, ym, Ushape)
 }
 
 
-### log-probit model and starting values in log scale
+### log-probit model - used to simplify the LGP model
 formLprobit <- as.formula(signal ~ d + (c - d) * pnorm(log(dose/e)/b)) 
-startvalLprobitnls1 <- function(xm, ym) # to suppress
-  # inputs
-  # - xm unique values of the dose (sorted by dose)
-  # - ym means of the signal at each value of xm (sorted by dose)
-  # - Ushape TRUE if U shape FALSE if umbrella shape
-{
-  # initial value of d
-  d <- ym[1]# mean of the response at the first dose
-  # initial value of c
-  c <- ym[which.max(xm)]# mean of the response at the highest dose
-  # initial value of b (standard error) assuming (after having looked many curves) the
-  # bell shape extends to the whole dose range so dose max = 4 sd = 4 * b IN LOG SCALE !!!
-  ldosemin <- log(min(xm[xm!=0]))
-  ldosemax <- log(max(xm))
-  b <- (ldosemax - ldosemin) / 4
-  # initial value of e (in the middle of the dose range in log)
-  e <- exp( ldosemin + (ldosemax - ldosemin) /2 )
-  startval <- list(b = b, c = c, d = d, e = e)
-}
 
-startvalLprobitnls2 <- function(x, y, xm, ym, increase) # requires the definition of increase from min and max values
-  # inputs
-  # - x values of the dose
-  # - y values the corresponding signal
-  # - xm unique values of the dose (sorted by dose)
-  # - ym means of the signal at each value of xm (sorted by dose)
-  # 
-{
-  maxi <- max(y, na.rm = TRUE)
-  mini <- min(y, na.rm = TRUE)
-  ampl <- maxi - mini
-  # inflate maxi and mini so as all values are strictly inside the interval [mini; maxi]
-  maxi <- maxi + 0.001 * ampl
-  mini <- mini - 0.001 * ampl
-  # initial value of c
-  c <- ifelse(increase, maxi, mini) 
-  # initial value of d
-  d <-ifelse(increase, mini, maxi) 
-  # initial value of e and b from regression
-  Y <- (y[x!=0] - d) / (c - d)
-  yreg <- qnorm( Y )
-  xreg <- log(x[x!=0])
-  reg <- lm(yreg ~ xreg)
-  b <- 1/ reg$coefficients[2]
-  e <- reg$coefficients[1] * (-b)
-  startval <- list(b = b, c = c, d = d, e = e)
-}
+### log-probit starting values - no more used
+# startvalLprobitnls1 <- function(xm, ym) # to suppress
+#   # inputs
+#   # - xm unique values of the dose (sorted by dose)
+#   # - ym means of the signal at each value of xm (sorted by dose)
+#   # - Ushape TRUE if U shape FALSE if umbrella shape
+# {
+#   # initial value of d
+#   d <- ym[1]# mean of the response at the first dose
+#   # initial value of c
+#   c <- ym[which.max(xm)]# mean of the response at the highest dose
+#   # initial value of b (standard error) assuming (after having looked many curves) the
+#   # bell shape extends to the whole dose range so dose max = 4 sd = 4 * b IN LOG SCALE !!!
+#   ldosemin <- log(min(xm[xm!=0]))
+#   ldosemax <- log(max(xm))
+#   b <- (ldosemax - ldosemin) / 4
+#   # initial value of e (in the middle of the dose range in log)
+#   e <- exp( ldosemin + (ldosemax - ldosemin) /2 )
+#   startval <- list(b = b, c = c, d = d, e = e)
+# }
+# 
+# startvalLprobitnls2 <- function(x, y, xm, ym, increase) # requires the definition of increase from min and max values
+#   # inputs
+#   # - x values of the dose
+#   # - y values the corresponding signal
+#   # - xm unique values of the dose (sorted by dose)
+#   # - ym means of the signal at each value of xm (sorted by dose)
+#   # 
+# {
+#   maxi <- max(y, na.rm = TRUE)
+#   mini <- min(y, na.rm = TRUE)
+#   ampl <- maxi - mini
+#   # inflate maxi and mini so as all values are strictly inside the interval [mini; maxi]
+#   maxi <- maxi + 0.001 * ampl
+#   mini <- mini - 0.001 * ampl
+#   # initial value of c
+#   c <- ifelse(increase, maxi, mini) 
+#   # initial value of d
+#   d <-ifelse(increase, mini, maxi) 
+#   # initial value of e and b from regression
+#   Y <- (y[x!=0] - d) / (c - d)
+#   yreg <- qnorm( Y )
+#   xreg <- log(x[x!=0])
+#   reg <- lm(yreg ~ xreg)
+#   b <- 1/ reg$coefficients[2]
+#   e <- reg$coefficients[1] * (-b)
+#   startval <- list(b = b, c = c, d = d, e = e)
+# }
 
 
 # for plot
@@ -352,5 +405,38 @@ invLprobit <- function(y, b, c, d, e)
   if ( ((d < c) & (y > c)) | ((d > c) & (y < c)) )
     return(NaN) else
       return(e * exp(qnorm((y - d) / (c - d)) *b))
+}
+
+
+fLGauss5poutofrange <- function(fit, signalmin, signalmax)
+  # TRUE if the fit gives an extremum value out of the signal range 
+  # function that takes the result of nls as first argument
+  # to be used before the choice of the best model
+{
+  par <- coef(fit)
+  b.i <- par["b"]
+  c.i <- par["c"]
+  d.i <- par["d"]
+  e.i <- par["e"]
+  f.i <- par["f"]
+  xextr.i <- exp(log(e.i) + (c.i - d.i)*b.i/(f.i*sqrt(2*pi))) 
+  yextr.i <- fLGauss5p(xextr.i, b = b.i, c = c.i, d = d.i, e = e.i, f = f.i)
+  outofrange <- (yextr.i > signalmax) | (yextr.i < signalmin)
+}
+
+fLGauss4poutofrange <- function(fit, signalmin, signalmax)
+  # TRUE if the fit gives an extremum value out of the signal range 
+  # function that takes the result of nls as first argument
+  # to be used before the choice of the best model
+{
+  par <- coef(fit)
+  b.i <- par["b"]
+  c.i <- par["d"]
+  d.i <- par["d"]
+  e.i <- par["e"]
+  f.i <- par["f"]
+  xextr.i <- exp(log(e.i) + (c.i - d.i)*b.i/(f.i*sqrt(2*pi))) 
+  yextr.i <- fLGauss5p(xextr.i, b = b.i, c = c.i, d = d.i, e = e.i, f = f.i)
+  outofrange <- (yextr.i > signalmax) | (yextr.i < signalmin)
 }
 

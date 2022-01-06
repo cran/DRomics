@@ -80,7 +80,7 @@ In cases where the BMD is not reached at the highest tested dose, \code{NA} is r
    \code{bmdcalc} returns an object of class \code{"bmdcalc"}, a list with 4 components:
     
    \item{res}{ a data frame reporting the results of the fit and BMD computation
-   on each selected item sorted in the ascending order of the adjusted p-values returned by function \code{itemselect}. The different columns correspond to the identifier of each item (\code{id}), the row number of this item in the initial data set (\code{irow}), the adjusted p-value of the selection step (\code{adjpvalue}), the name of the best fit model (\code{model}), the number of fitted parameters (\code{nbpar}), the values of the parameters \code{b}, \code{c}, \code{d}, \code{e} and \code{f}, (\code{NA} for non used parameters), the residual standard deviation (\code{SDres}), the typology of the curve (\code{typology}, (twelve class typology described in the help of the \code{drcfit} 
+   on each selected item sorted in the ascending order of the adjusted p-values returned by function \code{itemselect}. The different columns correspond to the identifier of each item (\code{id}), the row number of this item in the initial data set (\code{irow}), the adjusted p-value of the selection step (\code{adjpvalue}), the name of the best fit model (\code{model}), the number of fitted parameters (\code{nbpar}), the values of the parameters \code{b}, \code{c}, \code{d}, \code{e} and \code{f}, (\code{NA} for non used parameters), the residual standard deviation (\code{SDres}), the typology of the curve (\code{typology}, (16 class typology described in the help of the \code{drcfit} 
    function)), the
    rough trend of the curve (\code{trend}) defined with four classes (U, bell, increasing or decreasing shape), the
    theoretical value at the control (\code{y0}), the theoretical y range 
@@ -149,6 +149,18 @@ plot(r)
 \donttest{
 (rb <- bmdcalc(f, z = 2, x = 50))
 plot(rb)
+}
+
+# Plot of fits with BMD values 
+\donttest{
+# example with the BMD-1SD
+plot(f, BMDoutput = r, BMDtype = "zSD")
+
+# example with the BMD-2SD
+plot(f, BMDoutput = rb, BMDtype = "zSD")
+
+# example with the BMD-xfold with x = 10 percent
+plot(f, BMDoutput = r, BMDtype = "xfold")
 }
 
 # (2) an example on a microarray data set (a subsample of a greater data set) 

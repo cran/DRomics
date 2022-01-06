@@ -2,6 +2,9 @@
 drcfit <- function(itemselect,  
                    information.criterion = c("AICc", "BIC", "AIC"),
                    postfitfilter = TRUE,
+                   preventsfitsoutofrange = TRUE,
+                   enablesfequal0inGP = TRUE,
+                   enablesfequal0inLGP = TRUE,
                    progressbar = TRUE, 
                    parallel = c("no", "snow", "multicore"), ncpus)
 {
@@ -23,10 +26,6 @@ drcfit <- function(itemselect,
   
   if (progressbar)
     cat("The fitting may be long if the number of selected items is high.\n")
-  
-  # Definition of the sigmoid model to fit
-  # sigmoid.model <- match.arg(sigmoid.model, c("Hill", "log-probit"))
-  sigmoid.model <- "Hill"
   
   # definition of necessary data
   selectindex <- itemselect$selectindex
@@ -55,8 +54,8 @@ drcfit <- function(itemselect,
   AICdigits <- 2 # number of digits for rounding the AIC values
   information.criterion <- match.arg(information.criterion, c("AICc", "BIC", "AIC"))
 
-    # kcrit gives the argument k to pass to function AIC()
-  # dependeing of the number of parameters of the model 
+  # kcrit gives the argument k to pass to function AIC()
+  # depending of the number of parameters of the model 
   # (1 to 5, corresponding to the index of the vector)
   if (information.criterion == "AIC")
   { 
@@ -82,16 +81,19 @@ drcfit <- function(itemselect,
   {
     keeplin <- TRUE
     keepExpo <- TRUE
-    keepHill <- sigmoid.model == "Hill"
-    keepLprobit <- sigmoid.model == "log-probit"
+    keepHill <- TRUE
     keepLGauss <- TRUE
     keepGauss <- TRUE
     
     equalcdG <- FALSE # use to define the value of c equal to d in the Gauss4p model if needed
     equalcdLG <- FALSE # use to define the value of c equal to d in the LGauss4p model if needed
+    fequal0LG <- FALSE # use to define the value of f at 0 in the LGauss5p model if needed
+    fequal0G <- FALSE # use to define the value of f at 0 in the Gauss5p model if needed
     
     signal <- data[selectindex[i], ]
     signalm <- as.vector(data.mean[selectindex[i],]) # means per dose
+    signalmin <- min(signal)
+    signalmax <- max(signal)
     
     # preparation of data for modelling with nls 
     dset <- data.frame(signal = signal, dose = dose, doseranks = doseranks)
@@ -218,24 +220,6 @@ drcfit <- function(itemselect,
       }
     } else (AICHilli <- Inf)
     
-    ############### Lprobit fit #################
-    if (keepLprobit)
-    {
-      startLprobit <- startvalLprobitnls2(x = dose, y = signal, xm = doseu, ym = signalm,  
-                                          increase = increaseminmax)
-      Lprobit <- suppressWarnings(try(nls(formLprobit, start = startLprobit, data = dset, 
-                                          lower = c(0, -Inf, -Inf, 0), algorithm = "port"), silent = TRUE))
-      if (!inherits(Lprobit, "try-error"))
-      {
-        AICLprobiti <- round(AIC(Lprobit, k = kcrit[4]), digits = AICdigits)
-      } else 
-      {
-        # keepLprobit <- FALSE
-        AICLprobiti <- Inf
-      }
-    } else (AICLprobiti <- Inf)
-    
-    
     ################# LGauss fit ####################
     if (keepLGauss)
     {
@@ -245,14 +229,23 @@ drcfit <- function(itemselect,
                                            Ushape = Ushape)
         LGauss5p <- suppressWarnings(try(nls(formLGauss5p, start = startLGauss5p, data = dset,
                                              lower = c(0, -Inf, -Inf, 0, -Inf), algorithm = "port"), silent = TRUE))
+        LGauss5psucces <- !inherits(LGauss5p, "try-error")
+        # state a failure if the fitted model is out of the range of the signal
+        if (LGauss5psucces & preventsfitsoutofrange)
+          LGauss5psucces <- !fLGauss5poutofrange(LGauss5p, signalmin, signalmax)
       }
       startLGauss4p <- startvalLGauss4pnls(xm = doseu, ym = signalm,  
                                            Ushape = Ushape)
       LGauss4p <- suppressWarnings(try(nls(formLGauss4p, start = startLGauss4p, data = dset,
                                            lower = c(0, -Inf, 0, -Inf), algorithm = "port"), silent = TRUE))
+      LGauss4psucces <- !inherits(LGauss4p, "try-error")
+      # state a failure if the fitted model is out of the range of the signal
+      if (LGauss4psucces & preventsfitsoutofrange)
+        LGauss4psucces <- !fLGauss4poutofrange(LGauss4p, signalmin, signalmax)
+      
       if (lessthan5doses)
       {
-        if (!inherits(LGauss4p, "try-error"))
+        if (LGauss4psucces)
         {
           equalcdLG <- TRUE
           LGauss <- LGauss4p
@@ -261,7 +254,7 @@ drcfit <- function(itemselect,
       } else # if (lessthan5doses)
       {
         #### convergence of both models
-        if ((!inherits(LGauss4p, "try-error")) & (!inherits(LGauss5p, "try-error")))
+        if ((LGauss4psucces) & (LGauss5psucces))
         {
           AICLGauss4p <- round(AIC(LGauss4p, k = kcrit[4]), digits = AICdigits)
           AICLGauss5p <- round(AIC(LGauss5p, k = kcrit[5]), digits = AICdigits)
@@ -277,27 +270,45 @@ drcfit <- function(itemselect,
           }
         } else
           #### no convergence of both models
-          if (inherits(LGauss4p, "try-error") & inherits(LGauss5p, "try-error"))
+          if ((!LGauss4psucces) & (!LGauss5psucces))
           {
             # keepLGauss <- FALSE
             AICLGaussi <- Inf
             LGauss <- LGauss5p # we could have given LGauss4p
           } else 
             #### convergence only of LGauss4p
-            if ((!inherits(LGauss4p, "try-error")) & inherits(LGauss5p, "try-error"))
+            if ((LGauss4psucces) & (!LGauss5psucces))
             {
               equalcdLG <- TRUE
               LGauss <- LGauss4p
               AICLGaussi <- round(AIC(LGauss4p, k = kcrit[4]), digits = AICdigits)
             } else
               #### convergence only of LGauss5p
-              if ((!inherits(LGauss5p, "try-error")) & inherits(LGauss4p, "try-error"))
+              if ((LGauss5psucces) & (!LGauss4psucces))
               {
                 LGauss <- LGauss5p
                 AICLGaussi <- round(AIC(LGauss5p, k = kcrit[5]), digits = AICdigits)
               } else (AICLGaussi <- Inf)
-      } 
-
+        
+        # If LGauss5p chosen, try with f = 0
+        if (enablesfequal0inLGP & (is.finite(AICLGaussi)) & (!equalcdLG))
+        {
+          parLG5p <- coef(LGauss)
+          startLprobit <- list(b = parLG5p["b"], c = parLG5p["c"], d = parLG5p["d"], e = parLG5p["e"])
+          Lprobit <- suppressWarnings(try(nls(formLprobit, start = startLprobit, data = dset, 
+                                                lower = c(0, -Inf, -Inf, 0), algorithm = "port"), silent = TRUE))
+          if (!inherits(Lprobit, "try-error"))
+          {
+            AICwithfat0 <- round(AIC(Lprobit, k = kcrit[4]), digits = AICdigits)
+            if (AICwithfat0 <= AICLGaussi)
+            {
+              AICLGaussi <- AICwithfat0
+              LGauss <- Lprobit
+              fequal0LG <- TRUE
+            }
+          }          
+        } 
+      } # END of if (lessthan5doses) 
     } # END of if (keepLGauss)
         
       
@@ -312,15 +323,23 @@ drcfit <- function(itemselect,
                                          Ushape = Ushape)
         Gauss5p <- suppressWarnings(try(nls(formGauss5p, start = startGauss5p, data = dset, 
                                           lower = c(0, -Inf, -Inf, 0, -Inf), algorithm = "port"), silent = TRUE))
+        Gauss5psucces <- !inherits(Gauss5p, "try-error")
+        # state a failure if the fitted model is out of the range of the signal
+        if (Gauss5psucces & preventsfitsoutofrange)
+          Gauss5psucces <- !fGauss5poutofrange(Gauss5p, signalmin, signalmax)
       }
       startGauss4p <- startvalGauss4pnls(xm = doseu, ym = signalm,  
                                          Ushape = Ushape)
       Gauss4p <- suppressWarnings(try(nls(formGauss4p, start = startGauss4p, data = dset, 
                                           lower = c(0, -Inf, 0, -Inf), algorithm = "port"), silent = TRUE))
-
+      Gauss4psucces <- !inherits(Gauss4p, "try-error")
+      # state a failure if the fitted model is out of the range of the signal
+      if (Gauss4psucces & preventsfitsoutofrange)
+        Gauss4psucces <- !fGauss4poutofrange(Gauss4p, signalmin, signalmax)
+      
       if (lessthan5doses)
       {
-        if (!inherits(Gauss4p, "try-error"))
+        if (Gauss4psucces)
         {
           equalcdG <- TRUE
           Gauss <- Gauss4p
@@ -329,7 +348,7 @@ drcfit <- function(itemselect,
       } else # if (lessthan5doses)
       {
         #### convergence of both models
-        if ((!inherits(Gauss4p, "try-error")) & (!inherits(Gauss5p, "try-error")))
+        if ((Gauss4psucces) & (Gauss5psucces))
         {
           AICGauss4p <- round(AIC(Gauss4p, k = kcrit[4]), digits = AICdigits)
           AICGauss5p <- round(AIC(Gauss5p, k = kcrit[5]), digits = AICdigits)
@@ -345,28 +364,47 @@ drcfit <- function(itemselect,
           }
         } else
           #### no convergence of both models
-          if (inherits(Gauss4p, "try-error") & inherits(Gauss5p, "try-error"))
+          if ((!Gauss4psucces) & (!Gauss5psucces))
           {
             # keepGauss <- FALSE
             AICGaussi <- Inf
             Gauss <- Gauss5p # we could have given Gauss4p
           } else 
             #### convergence only of Gauss4p
-            if ((!inherits(Gauss4p, "try-error")) & inherits(Gauss5p, "try-error"))
+            if ((Gauss4psucces) & (!Gauss5psucces))
             {
               equalcdG <- TRUE
               Gauss <- Gauss4p
               AICGaussi <- round(AIC(Gauss4p, k = kcrit[4]), digits = AICdigits)
             } else
               #### convergence only of Gauss5p
-              if ((!inherits(Gauss5p, "try-error")) & inherits(Gauss4p, "try-error"))
+              if ((Gauss5psucces) & (!Gauss4psucces))
               {
                 Gauss <- Gauss5p
                 AICGaussi <- round(AIC(Gauss5p, k = kcrit[5]), digits = AICdigits)
               } else (AICGaussi <- Inf)
+
+      # If Gauss5p chosen, try with f = 0
+      if (enablesfequal0inGP & (is.finite(AICGaussi)) & (!equalcdG))
+      {
+        parG5p <- coef(Gauss)
+        startprobit <- list(b = parG5p["b"], c = parG5p["c"], d = parG5p["d"], e = parG5p["e"])
+        probit <- suppressWarnings(try(nls(formprobit, start = startprobit, data = dset, 
+                                            lower = c(0, -Inf, -Inf, 0), algorithm = "port"), silent = TRUE))
+        if (!inherits(probit, "try-error"))
+        {
+          AICwithfat0 <- round(AIC(probit, k = kcrit[4]), digits = AICdigits)
+          if (AICwithfat0 <= AICGaussi)
+          {
+            AICGaussi <- AICwithfat0
+            Gauss <- probit
+            fequal0G <- TRUE
+          }
+        }          
       } 
-   }# END of if (keepGauss)
-        
+    } # END of if (lessthan5doses) 
+  } # END of if (keepGauss)
+  
     
     ######### Fit of the linear model ############################    
     if (keeplin)
@@ -380,15 +418,17 @@ drcfit <- function(itemselect,
     constmodel <- lm(signal ~ 1, data = dset)
     AICconsti <-  round(AIC(constmodel, k = kcrit[1]), digits = AICdigits)
 
-    # Choice of the best fit
-    AICvec <- c(AICGaussi, AICLGaussi, AICHilli, AICLprobiti, AICExpoi, AIClini)
-    # Order in the default choice you want in case of equality of AIC values
+    ######### Choice of the best fit #####################################
+    ######################################################################
+    AICvec <- c(AICGaussi, AICLGaussi, AICHilli, AICExpoi, AIClini)
+    # the nb. of the model, 1 to 5, is used in the following with the last
+    # being the null model : nb. 6
     indmodeli <- which.min(AICvec)
     AICmin <- AICvec[indmodeli]
     if (AICmin > AICconsti - 2) # we keep the null model
     {
       fit <- constmodel
-      indmodeli <- 7 # constant model
+      indmodeli <- 6 # constant model
       nbpari <- 1
       b.i <- NA
       c.i <- mean(dset$signal)
@@ -406,9 +446,15 @@ drcfit <- function(itemselect,
         c.i <- ifelse(equalcdG, par["d"], par["c"])
         d.i <- par["d"]
         e.i <- par["e"]
-        f.i <- par["f"]
+        f.i <- ifelse(fequal0G, 0, par["f"])
         SDres.i <- sigma(fit)
-        nbpari <- ifelse(equalcdG, 4, 5)
+        if (enablesfequal0inGP)
+        {
+          nbpari <- ifelse(equalcdG | fequal0G, 4, 5)
+        } else
+        {
+          nbpari <- ifelse(equalcdG, 4, 5)
+        }
       } else
         if (indmodeli == 2)
         {
@@ -418,9 +464,15 @@ drcfit <- function(itemselect,
           c.i <- ifelse(equalcdLG, par["d"], par["c"])
           d.i <- par["d"]
           e.i <- par["e"]
-          f.i <- par["f"]
+          f.i <- ifelse(fequal0LG, 0, par["f"])
           SDres.i <- sigma(fit)
-          nbpari <- ifelse(equalcdLG, 4, 5)
+          if (enablesfequal0inLGP)
+          {
+            nbpari <- ifelse(equalcdLG | fequal0LG, 4, 5)
+          } else
+          {
+            nbpari <- ifelse(equalcdLG, 4, 5)
+          }
         } else
           if (indmodeli == 3)
           {
@@ -436,50 +488,40 @@ drcfit <- function(itemselect,
           } else
             if (indmodeli == 4)
             {
-              fit <- Lprobit
+              fit <- Expo
               par <- coef(fit)
               b.i <- par["b"]
-              c.i <- par["c"]
+              c.i <- NA
               d.i <- par["d"]
               e.i <- par["e"]
-              f.i <- 0 # to enable the use of the LGauss function to plot the model and calculate the BMD 
+              f.i <- NA
               SDres.i <- sigma(fit)
-              nbpari <- 4
+              nbpari <- 3
             } else
               if (indmodeli == 5)
               {
-                fit <- Expo
+                fit <- lin
                 par <- coef(fit)
-                b.i <- par["b"]
+                b.i <- par[2]
                 c.i <- NA
-                d.i <- par["d"]
-                e.i <- par["e"]
+                d.i <- par[1]
+                e.i <- NA
                 f.i <- NA
                 SDres.i <- sigma(fit)
-                nbpari <- 3
-              } else
-                if (indmodeli == 6)
-                {
-                  fit <- lin
-                  par <- coef(fit)
-                  b.i <- par[2]
-                  c.i <- NA
-                  d.i <- par[1]
-                  e.i <- NA
-                  f.i <- NA
-                  SDres.i <- sigma(fit)
-                  nbpari <- 2
-                } 
+                nbpari <- 2
+              } 
+      
     }
     
     # diagnostics on residuals (quadratic trend on residuals) 
-    # correct mean function ?
+    # answer to the question: correct mean function ?
     dset$resi <- residuals(fit)
     modquad.resi <- lm(resi ~ doseranks + I(doseranks^2), data = dset)
     mod0.resi <- lm(resi ~ 1, data = dset)
     resimeantrendPi <- anova(modquad.resi, mod0.resi)[[6]][2]
  
-    # diagnostics on absolute value of residuals - homoscedasticity ?
+    # diagnostics on absolute value of residuals 
+    # answer to the question of homoscedasticity ?
     # (quadratic trend on abs(residuals)) 
     dset$absresi <-abs(dset$resi)
     modquad.absresi <- lm(absresi ~ doseranks + I(doseranks^2), data = dset)
@@ -493,7 +535,7 @@ drcfit <- function(itemselect,
     }
     
     return(c(indmodeli, nbpari, b.i, c.i, d.i, e.i, f.i, SDres.i,
-             AIClini, AICExpoi, AICHilli, AICLprobiti, AICLGaussi, 
+             AIClini, AICExpoi, AICHilli, AICLGaussi, 
              AICGaussi,resimeantrendPi,resivartrendPi))
     
   } ##################################### END of fitoneitem
@@ -517,10 +559,13 @@ drcfit <- function(itemselect,
   if (progressbar) close(pb)
   
   dres <- as.data.frame(t(res))
+  # colnames(dres) <- c("model", "nbpar", "b", "c", "d", "e", "f", "SDres",
+  #                     "AIC.L", "AIC.E", "AIC.H", "AIC.lP", "AIC.lGP", "AIC.GP",
+  #                     "resimeantrendP", "resivartrendP")
   colnames(dres) <- c("model", "nbpar", "b", "c", "d", "e", "f", "SDres",
-                      "AIC.L", "AIC.E", "AIC.H", "AIC.lP", "AIC.lGP", "AIC.GP",
+                      "AIC.L", "AIC.E", "AIC.H", "AIC.lGP", "AIC.GP",
                       "resimeantrendP", "resivartrendP")
-
+  
   dres <- cbind(data.frame(id = row.names(data)[selectindex], 
                            irow = selectindex, 
                            adjpvalue = adjpvalue),
@@ -534,25 +579,25 @@ drcfit <- function(itemselect,
   # dres$resivartrendadjP <- p.adjust(dres$resivartrendP, method = "BH")
   
     
-  # removing of null models (const, model no 7) and 
+  # removing of null models (const, model no 6) and 
   # fits eliminated by the quadratic trend test on residuals
   if (postfitfilter)
   {
-    lines.success <- (dres$model != 7) & 
+    lines.success <- (dres$model != 6) & 
       ((dres$resimeantrendP > 0.05) | is.na(dres$resimeantrendP))
     # is.na(resimeantrendP because anova of two models with very close RSS
     # may return NA for pvalue)
   } else
   {
-    lines.success <- (dres$model != 7) 
+    lines.success <- (dres$model != 6) 
   }
   
   
   dres.failure <- dres[!lines.success, ]
   dfail <- dres.failure[, c("id", "irow", "adjpvalue")]
   dfail$cause <- character(length = nrow(dfail))
-  dfail$cause[dres.failure$model == 7] <- "constant.model"
-  dfail$cause[dres.failure$model != 7] <- "trend.in.residuals"
+  dfail$cause[dres.failure$model == 6] <- "constant.model"
+  dfail$cause[dres.failure$model != 6] <- "trend.in.residuals"
   
   dres <- dres[lines.success, ]
 
@@ -561,7 +606,7 @@ drcfit <- function(itemselect,
   
   dc <- dres[, c("id", "irow", "adjpvalue", "model", "nbpar", "b", "c", "d", "e", "f", "SDres")]
   dresitests <- dres[, c("resimeantrendP", "resivartrendP")]
-  modelnames <- c("Gauss-probit", "log-Gauss-probit", "Hill", "log-probit", "exponential", "linear")
+  modelnames <- c("Gauss-probit", "log-Gauss-probit", "Hill", "exponential", "linear")
   dc$model <- modelnames[dc$model] 
   
   # Calculation of the theoretical value at the control : y0
@@ -602,7 +647,8 @@ drcfit <- function(itemselect,
   y0[indHill] <- vd
   
   # calculation of y0, xextrem and yrange for Gauss-probit curves
-  indGP <- which(dc$model == "Gauss-probit")
+  # when f != 0
+  indGP <- which(dc$model == "Gauss-probit"& dc$f != 0)
   vb <- dc$b[indGP]
   vc <- dc$c[indGP]
   vd <- dc$d[indGP]
@@ -615,9 +661,20 @@ drcfit <- function(itemselect,
     abs(yextr - fGauss5p(dosemax, vb, vc, vd, ve, vf))
   )
   y0[indGP] <- fGauss5p(0, vb, vc, vd, ve, vf)
-
-  # calculation of y0, xextrem and yrange for log-Gauss-probit and log-probit curves
-  indlGP <- which(dc$model == "log-Gauss-probit" | dc$model == "log-probit")
+  # when f == 0
+  indGPf0 <- which((dc$model == "Gauss-probit" & dc$f == 0))
+  vb <- dc$b[indGPf0]
+  vc <- dc$c[indGPf0]
+  vd <- dc$d[indGPf0]
+  ve <- dc$e[indGPf0]
+  vf <- dc$f[indGPf0]
+  yrange[indGPf0] <- 
+    abs(fGauss5p(dosemin, vb, vc, vd, ve, vf) - fGauss5p(dosemax, vb, vc, vd, ve, vf))
+  y0[indGPf0] <- fGauss5p(0, vb, vc, vd, ve, vf)
+  
+  # calculation of y0, xextrem and yrange for log-Gauss-probit curves
+  # when f != 0
+  indlGP <- which(dc$model == "log-Gauss-probit" & dc$f != 0)
   vb <- dc$b[indlGP]
   vc <- dc$c[indlGP]
   vd <- dc$d[indlGP]
@@ -630,12 +687,22 @@ drcfit <- function(itemselect,
     abs(yextr - fLGauss5p(dosemax, vb, vc, vd, ve, vf))
   )
   y0[indlGP] <- vd
+  # when f == 0
+  indlGPf0 <- which(dc$model == "log-Gauss-probit" & dc$f == 0)
+  vb <- dc$b[indlGPf0]
+  vc <- dc$c[indlGPf0]
+  vd <- dc$d[indlGPf0]
+  ve <- dc$e[indlGPf0]
+  vf <- dc$f[indlGPf0]
+  yrange[indlGPf0] <- 
+    abs(fLGauss5p(dosemin, vb, vc, vd, ve, vf) - fLGauss5p(dosemax, vb, vc, vd, ve, vf))
+  y0[indlGPf0] <- vd
   
-  # definition of the typology
+  
+  # definition of trend and typology
   typology <- character(length = nselect)
   trend <- character(length = nselect)
- # pf <- 0.1 # if abs(f) < pf * abs(c - d) gaussian trends are considered roughly monotonous
-  
+
   if (nselect !=0)
   {
     for (i in 1:nselect) 
@@ -659,39 +726,55 @@ drcfit <- function(itemselect,
                 if (di$model == "Hill" & di$c <= di$d) 
                 {typology[i] <- "H.dec"
                 trend[i] <- "dec"} else
-                  if (di$model == "log-probit" & di$c > di$d) 
-                  {typology[i] <- "lP.inc"
-                  trend[i] <- "inc"} else
-                    if (di$model == "log-probit" & di$c <= di$d) 
-                    {typology[i] <- "lP.dec"
-                    trend[i] <- "dec"} else
-                      if (di$model == "log-Gauss-probit" & di$f < 0) 
-                      {typology[i] <- "lGP.U"
+                  if (di$model == "log-Gauss-probit" & di$f < 0) 
+                  {typology[i] <- "lGP.U"
+                  trend[i] <- "U"
+                  } else
+                    if (di$model == "log-Gauss-probit" & di$f >=0) 
+                    {typology[i] <- "lGP.bell"
+                    trend[i] <- "bell"
+                    } else
+                      if (di$model == "Gauss-probit" & di$f < 0) 
+                      {typology[i] <- "GP.U"
                       trend[i] <- "U"
-                      #ifelse(abs(di$f) > pf * abs(di$d - di$c), "U", ifelse(di$c > di$d, "inc", "dec"))
                       } else
-                        if (di$model == "log-Gauss-probit" & di$f >=0) 
-                        {typology[i] <- "lGP.bell"
+                        if (di$model == "Gauss-probit" & di$f >=0) 
+                        {typology[i] <- "GP.bell"
                         trend[i] <- "bell"
-                        #ifelse(abs(di$f) > pf * abs(di$d - di$c), "bell", ifelse(di$c > di$d, "inc", "dec"))
                         } else
-                          if (di$model == "Gauss-probit" & di$f < 0) 
-                          {typology[i] <- "GP.U"
-                          trend[i] <- "U"
-                          #ifelse(abs(di$f) > pf * abs(di$d - di$c), "U", ifelse(di$c > di$d, "inc", "dec"))
-                          } else
-                            if (di$model == "Gauss-probit" & di$f >=0) 
-                            {typology[i] <- "GP.bell"
-                            trend[i] <- "bell"
-                            #ifelse(abs(di$f) > pf * abs(di$d - di$c), "bell", ifelse(di$c > di$d, "inc", "dec"))
-                            } else
-                              if (di$model == "linear" & di$b > 0) 
-                              {typology[i] <- "L.inc"
-                              trend[i] <- "inc"} else
-                                if (di$model == "linear" & di$b <= 0) 
-                                {typology[i] <- "L.dec"
-                                trend[i] <- "dec"} 
-    }
+                          if (di$model == "linear" & di$b > 0) 
+                          {typology[i] <- "L.inc"
+                          trend[i] <- "inc"} else
+                            if (di$model == "linear" & di$b <= 0) 
+                            {typology[i] <- "L.dec"
+                            trend[i] <- "dec"} 
+      
+      if (enablesfequal0inLGP)
+      {
+        if (di$model == "log-Gauss-probit" & di$f == 0) 
+        {     
+          if (di$c > di$d) 
+          { typology[i] <- "lGP.inc"
+            trend[i] <- "inc"} else
+            if (di$c <= di$d) 
+            {typology[i] <- "lGP.dec"
+            trend[i] <- "dec"} 
+        }
+      } 
+      if (enablesfequal0inGP)
+      {
+        if (di$model == "Gauss-probit" & di$f == 0) 
+        {     
+          if (di$c > di$d) 
+          { typology[i] <- "GP.inc"
+          trend[i] <- "inc"} else
+            if (di$c <= di$d) 
+            {typology[i] <- "GP.dec"
+            trend[i] <- "dec"} 
+        }
+      } 
+      
+    } # END of the for
   } else
   {
     warning(strwrap(prefix = "\n", initial = "\n", 
@@ -700,9 +783,10 @@ drcfit <- function(itemselect,
   }
   dc$typology <- typology
   
-  # correction of the trend for Gauss-probit curves with xextrem == 0
+  # correction of the trend and typology for Gauss-probit curves with xextrem == 0
   indnullxextr <- which((dc$model == "Gauss-probit") & (xextrem == 0))
   trend[indnullxextr] <- ifelse(dc$f[indnullxextr] > 0, "dec", "inc") 
+  typology[indnullxextr] <- ifelse(dc$f[indnullxextr] > 0, "GP.dec", "GP.inc") 
   
   dc$trend <- factor(trend)
   dc$y0 <- y0
@@ -713,25 +797,10 @@ drcfit <- function(itemselect,
   # number of null models
   n.failure <- length(itemselect$selectindex) - nrow(dc)
   
-  if (sigmoid.model == "Hill")
-  {
-    dc$model <- factor(dc$model, # to specify the order
-                       levels = c("Hill", "linear", "exponential", "Gauss-probit", "log-Gauss-probit"))
-    dc$typology <- factor(dc$typology,
-                          levels = c("H.inc", "H.dec", "L.inc", "L.dec", 
-                                     "E.inc.convex","E.dec.concave", "E.inc.concave", "E.dec.convex",
-                                     "GP.U", "GP.bell", "lGP.U", "lGP.bell"))
-    dAIC <- dres[, c("AIC.L", "AIC.E", "AIC.H", "AIC.lGP", "AIC.GP")] 
-  } else
-  {
-    dc$model <- factor(dc$model, # to specify the order
-                       levels = c("log-probit", "linear", "exponential", "Gauss-probit", "log-Gauss-probit")) 
-    dc$typology <- factor(dc$typology,
-                          levels = c("lP.inc", "lP.dec", "L.inc", "L.dec", 
-                                     "E.inc.convex","E.dec.concave", "E.inc.concave", "E.dec.convex",
-                                     "GP.U", "GP.bell", "lGP.U", "lGP.bell"))
-    dAIC <- dres[, c("AIC.L", "AIC.E", "AIC.lP", "AIC.lGP", "AIC.GP")] 
-  }
+  dc$model <- factor(dc$model, # to specify the order
+                     levels = c("Hill", "linear", "exponential", "Gauss-probit", "log-Gauss-probit"))
+  dc$typology <- factor(dc$typology)
+  dAIC <- dres[, c("AIC.L", "AIC.E", "AIC.H", "AIC.lGP", "AIC.GP")] 
   
   reslist <- list(fitres = dc, omicdata = itemselect$omicdata,  
                   information.criterion = information.criterion, information.criterion.val = dAIC,
@@ -771,12 +840,13 @@ print.drcfit <- function(x, ...)
 
 plot.drcfit <- function(x, items, 
                 plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), 
-                dose_log_transfo = FALSE, ...)
+                dose_log_transfo = FALSE, 
+                BMDoutput, BMDtype = c("zSD", "xfold"), ...)
 {
+  plot.type <- match.arg(plot.type, c("dose_fitted", "dose_residuals","fitted_residuals"))  
   if (!inherits(x, "drcfit"))
     stop("Use only with 'drcfit' objects.")
   
-  # a ggplot alternative
   if(missing(items))
   {
     items <- 20
@@ -786,7 +856,8 @@ plot.drcfit <- function(x, items,
     a character vector indicating the identifiers of the items who want to plot.")
   if (is.numeric(items))
   {
-    subd <- x$fitres[1:min(nrow(x$fitres),items), ]
+    inditems <- 1:min(nrow(x$fitres),items)
+    subd <- x$fitres[inditems, ]
   } else
   if (is.character(items))
   {
@@ -795,21 +866,110 @@ plot.drcfit <- function(x, items,
     stop("At least one of the chosen items was not selected as responding. You should use targetplot() in that case.")
     subd <- x$fitres[inditems, ]
   }
-  plotfitsubset(subd, 
+  g <- plotfitsubset(subd, 
                 dose = x$omicdata$dose, 
                 data = x$omicdata$data, 
                 data.mean = x$omicdata$data.mean, 
                 npts = 500,
                 plot.type = plot.type, 
-                dose_log_transfo = dose_log_transfo) 
+                dose_log_transfo = dose_log_transfo) + theme_classic()
+
+  addBMD <- FALSE
+  addCI <- FALSE
+  ## optional add of BMD values on fits
+  if (!(missing(BMDoutput)) & (plot.type == "dose_fitted"))
+  {
+    BMDtype <- match.arg(BMDtype, c("zSD", "xfold")) 
+    addBMD <- TRUE
+    if (inherits(BMDoutput, "bmdcalc") | inherits(BMDoutput, "bmdboot"))
+    {
+      bmdres <- BMDoutput$res
+      subbmdres <- BMDoutput$res[inditems, ]
+      if (inherits(BMDoutput, "bmdboot")) addCI <- TRUE else addCI <- FALSE
+      
+      if (any(subd$id != subbmdres$id) | any(subd$yrange != subbmdres$yrange))
+      {
+        warning(strwrap(prefix = "\n", initial = "\n",
+                        "To add BMD values on the plot you must 
+                        first apply bmdcalc() (and if you want also BMD confidence intervals
+                        bmdboot()) on the R object of class drcfit that is specified as first
+                        argument of the current plot function, and then 
+                        give in the argument BMDoutput the R object given in output
+                    of bmdcalc() or bmdboot()."))
+        addBMD <- FALSE
+      } else
+      {
+        if (BMDtype == "zSD")
+        {
+          zvalue <- BMDoutput$z
+          subbmdres$lowhline <- subbmdres$y0 - zvalue * subbmdres$SDres
+          subbmdres$uphline <- subbmdres$y0 + zvalue * subbmdres$SDres
+          subbmdres$BMD <- subbmdres$BMD.zSD
+          if (inherits(BMDoutput, "bmdboot"))
+          {
+            subbmdres$BMDlower <- subbmdres$BMD.zSD.lower
+            subbmdres$BMDupper <- subbmdres$BMD.zSD.upper
+          }
+        } else  # so BMDxfold
+        {
+          xvalue <- BMDoutput$x
+          subbmdres$lowhline <- subbmdres$y0 * (1 + xvalue/100)
+          subbmdres$uphline <- subbmdres$y0 * (1 - xvalue/100)
+          subbmdres$BMD <- subbmdres$BMD.xfold
+          if (inherits(BMDoutput, "bmdboot"))
+          {
+            addCI <- TRUE
+            subbmdres$BMDlower <- subbmdres$BMD.xfold.lower
+            subbmdres$BMDupper <- subbmdres$BMD.xfold.upper
+          }
+        }
+      }
+    } else
+    {
+      warning(strwrap(prefix = "\n", initial = "\n",
+                      "To add BMD values on the plot you must 
+                        first apply bmdcalc() (and if you want also BMD confidence intervals
+                        bmdboot()) on the R object of class drcfit that is specified as first
+                        argument of the current plot function, and then 
+                        give in the argument BMDoutput the R object given in output
+                    of bmdcalc() or bmdboot()."))
+      addBMD <- FALSE
+    }
+  }# END if !missing(BMDoutput)
+  
+  if (addBMD)
+  {
+    g <- g + geom_vline(data = subbmdres,
+                        aes_(xintercept = quote(BMD)), 
+                        linetype = 1, colour = "red") +
+      # geom_ribbon(data = subbmdres,
+      #             aes_(ymin = quote(lowhline), 
+      #                  ymax = quote(uphline)), 
+      #             fill = "red", alpha = 0.1)
+      geom_hline(data = subbmdres, aes_(yintercept = quote(uphline)),
+                 linetype = 3, colour = "red") +
+      geom_hline(data = subbmdres, aes_(yintercept = quote(lowhline)),
+                 linetype = 3,colour = "red")
+    if (addCI)
+    {
+      g <- g + geom_vline(data = subbmdres, aes_(xintercept = quote(BMDlower)), 
+                          linetype = 2,colour = "red") +
+        geom_vline(data = subbmdres, aes_(xintercept = quote(BMDupper)), 
+                   linetype = 2, colour = "red") 
+    }
+  }
+  print(g)
   
 }
 
 plotfit2pdf <- function(x, items, 
                         plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"), 
-                        dose_log_transfo = FALSE, nrowperpage = 6, ncolperpage = 4,
+                        dose_log_transfo = FALSE, 
+                        BMDoutput, BMDtype = c("zSD", "xfold"),
+                        nrowperpage = 6, ncolperpage = 4,
                         path2figs = getwd())
 {
+  plot.type <- match.arg(plot.type, c("dose_fitted", "dose_residuals","fitted_residuals"))  
   if (!inherits(x, "drcfit"))
     stop("Use only with 'drcfit' objects.")
   
@@ -823,6 +983,7 @@ plotfit2pdf <- function(x, items,
     a character vector indicating the identifiers of the items who want to plot.")
   if (is.numeric(items))
   {
+    inditems <- 1:min(nrow(x$fitres),items)
     subd <- x$fitres[1:min(nrow(x$fitres),items), ]
   } else
   if (is.character(items))
@@ -841,10 +1002,74 @@ plotfit2pdf <- function(x, items,
   nplotsperpage <- nrowperpage * ncolperpage
   npage <- ceiling(nrow(subd) / nplotsperpage)
   
+  addBMD <- FALSE
+  addCI <- FALSE
+  if (!(missing(BMDoutput)) & (plot.type == "dose_fitted"))
+  {
+    BMDtype <- match.arg(BMDtype, c("zSD", "xfold")) 
+    addBMD <- TRUE
+    if (inherits(BMDoutput, "bmdcalc") | inherits(BMDoutput, "bmdboot"))
+    {
+      bmdres <- BMDoutput$res
+      subbmdres <- BMDoutput$res[inditems, ]
+      if (inherits(BMDoutput, "bmdboot")) addCI <- TRUE else addCI <- FALSE
+
+      if (any(subd$id != subbmdres$id) | any(subd$yrange != subbmdres$yrange))
+      {
+        warning(strwrap(prefix = "\n", initial = "\n",
+                        "To add BMD values on the plot you must 
+                        first apply bmdcalc() (and if you want also BMD confidence intervals
+                        bmdboot()) on the R object of class drcfit that is specified as first
+                        argument of the current plot function, and then 
+                        give in the argument BMDoutput the R object given in output
+                    of bmdcalc() or bmdboot()."))
+        addBMD <- FALSE
+      } else
+      {
+        if (BMDtype == "zSD")
+        {
+          zvalue <- BMDoutput$z
+          subbmdres$lowhline <- subbmdres$y0 - zvalue * subbmdres$SDres
+          subbmdres$uphline <- subbmdres$y0 + zvalue * subbmdres$SDres
+          subbmdres$BMD <- subbmdres$BMD.zSD
+          if (inherits(BMDoutput, "bmdboot"))
+          {
+            subbmdres$BMDlower <- subbmdres$BMD.zSD.lower
+            subbmdres$BMDupper <- subbmdres$BMD.zSD.upper
+          }
+        } else  # so BMDxfold
+        {
+          xvalue <- BMDoutput$x
+          subbmdres$lowhline <- subbmdres$y0 * (1 + xvalue/100)
+          subbmdres$uphline <- subbmdres$y0 * (1 - xvalue/100)
+          subbmdres$BMD <- subbmdres$BMD.xfold
+          if (inherits(BMDoutput, "bmdboot"))
+          {
+            addCI <- TRUE
+            subbmdres$BMDlower <- subbmdres$BMD.xfold.lower
+            subbmdres$BMDupper <- subbmdres$BMD.xfold.upper
+          }
+        }
+      }
+    } else
+    {
+      warning(strwrap(prefix = "\n", initial = "\n",
+                      "To add BMD values on the plot you must 
+                        first apply bmdcalc() (and if you want also BMD confidence intervals
+                        bmdboot()) on the R object of class drcfit that is specified as first
+                        argument of the current plot function, and then 
+                        give in the argument BMDoutput the R object given in output
+                    of bmdcalc() or bmdboot()."))
+      addBMD <- FALSE
+    }
+  }# END if !missing(BMDoutput)
+
+  
   for (i in 1:npage)
   {
     if (i == npage) indmax <- nrow(subd) else indmax <- i*nplotsperpage
-    g <- plotfitsubset(subd[seq((i-1)*nplotsperpage + 1,indmax, 1), ], 
+    ind2plot <- seq((i-1)*nplotsperpage + 1,indmax, 1)
+    g <- plotfitsubset(subd[ind2plot, ], 
                                  dose = x$omicdata$dose, 
                                  data = x$omicdata$data, 
                                  data.mean = x$omicdata$data.mean, 
@@ -852,7 +1077,28 @@ plotfit2pdf <- function(x, items,
                                  plot.type = plot.type, 
                                  dose_log_transfo = dose_log_transfo, 
                                   nr = nrowperpage, 
-                                  nc = ncolperpage) 
+                                  nc = ncolperpage) + theme_classic()
+    if (addBMD)
+    {
+      g <- g + geom_vline(data = subbmdres[ind2plot, ],
+                          aes_(xintercept = quote(BMD)), 
+                          linetype = 1, colour = "red") +
+        # geom_ribbon(data = subbmdres[ind2plot, ],
+        #             aes_(ymin = quote(lowhline), 
+        #                  ymax = quote(uphline)), 
+        #             fill = "red", alpha = 0.1)
+        geom_hline(data = subbmdres[ind2plot, ], aes_(yintercept = quote(uphline)),
+                   linetype = 3, colour = "red") +
+        geom_hline(data = subbmdres[ind2plot, ], aes_(yintercept = quote(lowhline)),
+                   linetype = 3,colour = "red")
+      if (addCI)
+      {
+        g <- g + geom_vline(data = subbmdres[ind2plot, ], aes_(xintercept = quote(BMDlower)), 
+                            linetype = 2,colour = "red") +
+          geom_vline(data = subbmdres[ind2plot, ], aes_(xintercept = quote(BMDupper)), 
+                     linetype = 2, colour = "red") 
+      }
+    }
     print(g)
   }
   dev.off()

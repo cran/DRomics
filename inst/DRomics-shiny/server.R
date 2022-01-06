@@ -15,36 +15,46 @@ server <- function(input, output, session) {
   }
   
   ## Input: file data
-  filedata <- reactive({
-    
-    if(inTypeData() == 'microarraydata') {
-      req(input$datafile_microarray)
-      validateFile(input$datafile_microarray)
-      microarraydata(input$datafile_microarray$datapath, check = TRUE, norm.method = input$normMethod_microarray)
-    } else if(inTypeData() == 'rnaseqdata') {
-      req(input$datafile_rnaseq)
-      validateFile(input$datafile_rnaseq)
-      RNAseqdata(input$datafile_rnaseq$datapath, check = TRUE, transfo.method = input$transfoMethod_rnaseq, round.counts = TRUE)
-    } else if(inTypeData() == 'metabolomicdata') {
-      req(input$datafile_metabolomic)
-      validateFile(input$datafile_metabolomic)
-      metabolomicdata(input$datafile_metabolomic$datapath, check = TRUE)
-    } else if(inTypeData() == 'continuousanchoringdata') {
-      req(input$datafile_anchoring)
-      validateFile(input$datafile_anchoring)
-      continuousanchoringdata(input$datafile_anchoring$datapath, check = TRUE)
+  filedata <- eventReactive(input$buttonRunStep1, {
+    tryCatch({
+      if(inTypeData() == 'microarraydata') {
+        req(input$datafile_microarray)
+        validateFile(input$datafile_microarray)
+        microarraydata(input$datafile_microarray$datapath, backgrounddose = as.numeric(input$bgdose_microarray), check = TRUE, norm.method = input$normMethod_microarray)
+      } else if(inTypeData() == 'rnaseqdata') {
+        req(input$datafile_rnaseq)
+        validateFile(input$datafile_rnaseq)
+        RNAseqdata(input$datafile_rnaseq$datapath, backgrounddose = as.numeric(input$bgdose_rnaseq), check = TRUE, transfo.method = input$transfoMethod_rnaseq, round.counts = TRUE)
+      } else if(inTypeData() == 'metabolomicdata') {
+        req(input$datafile_metabolomic)
+        validateFile(input$datafile_metabolomic)
+        metabolomicdata(input$datafile_metabolomic$datapath, backgrounddose = as.numeric(input$bgdose_metabolomic), check = TRUE)
+      } else if(inTypeData() == 'continuousanchoringdata') {
+        req(input$datafile_anchoring)
+        validateFile(input$datafile_anchoring)
+        continuousanchoringdata(input$datafile_anchoring$datapath, backgrounddose = as.numeric(input$bgdose_anchoring), check = TRUE)}
+    },
+    error = function(err) {
+      # must contain the error returned when the data does not contain dose at zero (see background dose)
+      # useful to catch and redirect errors when the app is deployed on a shiny server
+      return(err) 
     }
+    )      
   })
   
   ## Output : print and plot omic data
   output$printOmicData <- renderPrint({ 
     ff <- filedata()
-    print(ff)
+    if(!"message"%in%names(ff))
+      print(ff)
+    else
+      cat("Error:\n", ff$message)
   })
   
   output$plotOmicData <- renderPlot({
     ff <- filedata()
-    plot(ff, range = 1e10)
+    if(!"message"%in%names(ff))
+      plot(ff, range = 1e10)
   })
   
   
@@ -52,8 +62,8 @@ server <- function(input, output, session) {
   ####### STEP 2 #####################################################################
   ####################################################################################
   
-  inFDR <- reactive({as.numeric(input$FDR)})
-  inSelectMethod <- reactive({input$selectMethod})
+  inFDR <- eventReactive(input$buttonRunStep2, {as.numeric(input$FDR)})
+  inSelectMethod <- eventReactive(input$buttonRunStep2, {input$selectMethod})
   observe({shinyjs::disable("buttonDowloadItems")})
   
   output$printItemSelect <- renderPrint({ 
@@ -89,6 +99,7 @@ server <- function(input, output, session) {
   
   observe({shinyjs::disable("buttonResBmdcalc")})
   observe({shinyjs::disable("buttonPlotBmdcalc")})
+  observe({shinyjs::disable("buttonDownloadDrcfitplotBMD")})
   
   rundrcfit <- eventReactive(input$buttonDrcfit, {
     return(drcfit(signifitems, progressbar = FALSE, parallel = "no"))
@@ -128,8 +139,8 @@ server <- function(input, output, session) {
   ####### STEP 4 #####################################################################
   ####################################################################################
   
-  numZbmdcalc <- reactive({as.numeric(input$zbmdcalc)})
-  numXbmdcalc <- reactive({as.numeric(input$xbmdcalc)})
+  numZbmdcalc <- eventReactive(input$buttonRunStep4, {as.numeric(input$zbmdcalc)})
+  numXbmdcalc <- eventReactive(input$buttonRunStep4, {as.numeric(input$xbmdcalc)})
   
   output$printBmdcalc <- renderPrint({
     
@@ -251,6 +262,27 @@ server <- function(input, output, session) {
         dev.off()
       }
     )
+    
+    
+    output$plotDrcfitBMD <- renderPlot({
+      plot(mydrcfit, plot.type = "dose_fitted",
+           BMDoutput = mybmdcalc, BMDtype = input$BMDtype_plot2pdf,
+           dose_log_transfo = as.logical(input$logbmd_plot2pdf))
+    })
+    
+    shinyjs::enable("buttonDownloadDrcfitplotBMD")
+    output$buttonDownloadDrcfitplotBMD <- downloadHandler(
+      filename = function(){
+        "drcfitplot.pdf"
+      },
+      content = function(file) {
+        plotfit2pdf(mydrcfit, plot.type = "dose_fitted",
+                    BMDoutput = mybmdcalc, BMDtype = input$BMDtype_plot2pdf,
+                    dose_log_transfo = as.logical(input$logbmd_plot2pdf), path2figs = tempdir())
+        file.copy(paste0(tempdir(), "/drcfitplot.pdf"), file)
+      },
+      contentType = {"application/pdf"}
+    )
   })
   
   
@@ -274,12 +306,12 @@ server <- function(input, output, session) {
               "",
               "# Step 1",
               paste0("o <- ", ifelse(input$typeData == 'microarraydata', 
-                                     paste0("microarraydata('", input$datafile_microarray$name, "', check = TRUE, norm.method = '", input$normMethod_microarray, "')"), 
+                                     paste0("microarraydata('", input$datafile_microarray$name, "', backgrounddose = ", input$bgdose_microarray, ", check = TRUE, norm.method = '", input$normMethod_microarray, "')"), 
                                      ifelse(input$typeData == 'rnaseqdata', 
-                                            paste0("RNAseqdata('", input$datafile_rnaseq$name, "', check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "', round.counts = TRUE)"), 
+                                            paste0("RNAseqdata('", input$datafile_rnaseq$name, "', backgrounddose = ", input$bgdose_rnaseq, ", check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "', round.counts = TRUE)"), 
                                             ifelse(input$typeData == 'metabolomicdata', 
-                                                   paste0("metabolomicdata('", input$datafile_metabolomic$name, "', check = TRUE)"),
-                                                   paste0("continuousanchoringdata('", input$datafile_anchoring$name, "', check = TRUE)")
+                                                   paste0("metabolomicdata('", input$datafile_metabolomic$name, "', backgrounddose = ", input$bgdose_metabolomic, ", check = TRUE)"),
+                                                   paste0("continuousanchoringdata('", input$datafile_anchoring$name, "', backgrounddose = ", input$bgdose_anchoring, ", check = TRUE)")
                                                    )))),
               "print(o)",
               "plot(o)",
@@ -295,6 +327,7 @@ server <- function(input, output, session) {
               "",
               "# Step 4",
               paste0("r <- bmdcalc(f, z = ", numZbmdcalc(), ", x = ", numXbmdcalc(), ")"),
+              paste0("head(r$res, 10)"),
               if(input$plottype == 'ecdfcolorgradient') {
                 if(input$splitby == 'none') {
                   paste0("bmdplotwithgradient(r$res, BMDtype = '", input$BMDtype, 
@@ -312,7 +345,9 @@ server <- function(input, output, session) {
                 }
               } else {
                 paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", input$histbin, ")")
-              }
+              },
+              paste0("plot(f, plot.type = 'dose_fitted', BMDoutput = r, BMDtype = '", input$BMDtype_plot2pdf, 
+                     "', dose_log_transfo = ", input$logbmd_plot2pdf, ")")
     )
     
     output$buttonDownRCode <- downloadHandler(
@@ -343,12 +378,6 @@ server <- function(input, output, session) {
     
     text <- c("# Few lines of R script to go further using the package",
               "",
-              "# Plot of fitted curves",
-              "curvesplot(f$fitres, xmax = max(f$omicdata$dose), facetby = 'trend', colorby = 'model') + 
-  xlab('dose') + ylab('theoretical signal')",
-              "# The first argument can be an extended dataframe, which could be used to split",
-              "# the plot of color the curves (using facetby or colorby)",
-              "",
               "# Bootstrap to compute confidence intervals on BMD estimations",
               "# May take few hours !!!!!!!!!!!!!!!!!!!!!",
               "# This computation time can be reduced using parallel computing",
@@ -356,13 +385,12 @@ server <- function(input, output, session) {
               "(b <- bmdboot(r, niter = 1000, progressbar = TRUE))",
               "plot(b)",
               "",
-              "# Representation of cumulative distribution of BMD values",
-              "# with their confidence 95% intervals",
-              "# Argument by and CI.col can be used with additional columns",
-              "# built from annotation of items for example",
-              "a <- b$res[is.finite(b$res$BMD.zSD.upper), ] # removing of CI with infinite bounds",
-              "ecdfplotwithCI(variable = a$BMD.zSD, CI.lower = a$BMD.zSD.lower, 
-  CI.upper = a$BMD.zSD.upper, by = a$model, CI.col = a$trend)"
+              "# plot the fitted dose-response with BMD",
+              paste0("plot(f, plot.type = 'dose_fitted', BMDoutput = b, BMDtype = '", input$BMDtype_plot2pdf, "', dose_log_transfo = ", input$logbmd_plot2pdf, ")"),
+              "",
+              "# Other functions (bmdplot, bmdplotwithgradient, curvesplot, trendplot and sensitivityplot)",
+              "# are available in the DRomics package to explore your results (see the vignette and the",
+              "# cheat sheet) and will soon be the subject of a second shiny application !"
     )
     
     output$buttonDownRCodeFurther <- downloadHandler(

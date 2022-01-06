@@ -86,7 +86,7 @@ to finite values.
    the adjusted p-value of the selection step (\code{adjpvalue}), the name of the best fit model (\code{model}), 
    the number of fitted parameters (\code{nbpar}), the values of the parameters \code{b}, \code{c}, \code{d}, 
    \code{e} and \code{f}, (\code{NA} for non used parameters), the residual standard deviation (\code{SDres}), 
-   the typology of the curve (\code{typology}, (twelve class typology described in the help of the \code{drcfit} 
+   the typology of the curve (\code{typology}, (16 class typology described in the help of the \code{drcfit} 
    function)), the rough trend of the curve (\code{trend}) defined with four classes 
    (U, bell, increasing or decreasing shape), the theoretical value at the control (\code{y0}), 
    the theoretical y range for x within the range of tested doses 
@@ -153,18 +153,29 @@ plot(b, remove.infinite = FALSE) # plot of BMD.zSD without removing of BMDs
 }
 
 
-# bootstrap on only a subsample of items, here those best fitted by the linear model
+# bootstrap on only a subsample of items
 # with a greater number of iterations
 \donttest{
-(b.lin.95 <- bmdboot(r, items = r$res$id[r$res$model == "Gauss-probit"],
+chosenitems <- r$res$id[1:5] 
+(b.95 <- bmdboot(r, items = chosenitems,
                      niter = 1000, progressbar = TRUE))
-b.lin.95$res
+b.95$res
+
+# Plot of fits with BMD values  and confidence intervals
+# with the default BMD.zSD
+plot(f, items = chosenitems, BMDoutput = b.95, BMDtype = "zSD")
+# with the default BMD.xfold 
+plot(f, items = chosenitems, BMDoutput = b.95, BMDtype = "xfold")
 
 # same bootstrap but changing the default confidence level (0.95) to 0.90
-(b.lin.90 <- bmdboot(r, items = r$res$id[r$res$model == "Gauss-probit"],
+(b.90 <- bmdboot(r, items = chosenitems,
                        niter = 1000, conf.level = 0.9, progressbar = TRUE))
-b.lin.90$res
+b.90$res
+
+
 }
+
+
 
 # (2) an example on a microarray data set (a subsample of a greater data set) 
 #

@@ -52,7 +52,10 @@ plot(o.metabolo, col = "green", range = 1e6)
 anchoringfilename <- system.file("extdata", "apical_anchoring.txt", package = "DRomics")
 
 ## -----------------------------------------------------------------------------
-(o.anchoring <- continuousanchoringdata(anchoringfilename))
+(o.anchoring <- continuousanchoringdata(anchoringfilename, backgrounddose = 0.1))
+# Here the argument backgrounddose is used to specify that doses below  or equal to 0.1
+# are considered as 0 in the DRomics workflow.
+# Specifying this argument is necessary when there is no doses at 0 in the data 
 plot(o.anchoring)
 
 ## -----------------------------------------------------------------------------
@@ -93,6 +96,9 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
                     line.size = 1.2) + labs(shape = "model")
 
 ## -----------------------------------------------------------------------------
+plot(f, BMDoutput = r) 
+
+## -----------------------------------------------------------------------------
 (b <- bmdboot(r, niter = 50, progressbar = FALSE))
 
 ## -----------------------------------------------------------------------------
@@ -100,6 +106,9 @@ head(b$res, 10)
 
 ## -----------------------------------------------------------------------------
 plot(b, BMDtype = "zSD", by = "trend") 
+
+## -----------------------------------------------------------------------------
+plot(f, BMDoutput = b) 
 
 ## -----------------------------------------------------------------------------
 # code to import the file for this example in our package
