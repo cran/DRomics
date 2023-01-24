@@ -24,6 +24,7 @@ continuousomicdata <- function(file, backgrounddose, check = TRUE)
         stop("The argument file must be a character string ending by .txt.")
     }
     d <- read.table(file, header = FALSE)
+    colnames(d) <- c("item",paste("S", 1:(ncol(d)-1), sep = ""))
   } 
   nrowd <- nrow(d)
   ncold <- ncol(d)
@@ -167,7 +168,7 @@ print.continuousomicdata <- function(x, ...)
   }
 }
 
-plot.continuousomicdata <- function(x, ...) 
+plot.continuousomicdata <- function(x, range4boxplot = 1e6, ...) 
 {
   if (!inherits(x, "continuousomicdata"))
     stop("Use only with 'continuousomicdata' objects.")
@@ -175,7 +176,7 @@ plot.continuousomicdata <- function(x, ...)
   def.par <- par(no.readonly = TRUE)
     par(xaxt = "n")
     boxplot(x$data, xlab = "Samples", ylab = "Signal", 
-            main = paste("Continuous omics data"), ...) 
+            main = paste("Continuous omics data"), range = range4boxplot, ...) 
   par(def.par)    
 }
 

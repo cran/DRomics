@@ -3,7 +3,7 @@
 # form an extended results dataframe (e.g. with annotation of items)
 # with optionnal use of columns for shape and or facet 
 bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
-                                xmin, xmax, y0shift = TRUE, 
+                                xmin, xmax, y0shift = TRUE, scaling = FALSE,
                                 facetby, facetby2, shapeby, npoints = 50, 
                                 line.size, point.size = 1,
                                 ncol4faceting, limits4colgradient,
@@ -17,21 +17,44 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
     stop("The first argument of bmdplotwithgradient must be a dataframe 
     (see ?bmdplotwithgradient for details).")
   
+  if(scaling & !y0shift)
+  {
+    y0shift <- TRUE
+    warning(strwrap(prefix = "\n", initial = "\n",
+                    "y0shift is forced to TRUE when scaling is TRUE."))
+  }
+  
   cnames <- colnames(extendedres)
   
   if (BMDtype == "zSD")
   {  
-    if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "BMD.zSD"), cnames)))
-      stop("The first argument of bmdplotwithgradient must be a dataframe
-      containing at least columns named id, model, b, c, d, e, f and BMD.zSD.")
+    if (scaling)
+    {
+      if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "y0", "maxychange", "BMD.zSD"), cnames)))
+        stop("The first argument of bmdplotwithgradient must be a dataframe
+      containing at least columns named id, model, b, c, d, e, f, y0, maxychange and BMD.zSD.")
+    } else
+    {
+      if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "y0", "BMD.zSD"), cnames)))
+        stop("The first argument of bmdplotwithgradient must be a dataframe
+      containing at least columns named id, model, b, c, d, e, f, y0 and BMD.zSD.")
+    }
     
     BMD2plot <- data.frame(x = extendedres$BMD.zSD, id = extendedres$id)
   }
   else 
   {
-    if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "BMD.xfold"), cnames)))
-      stop("The first argument of bmdplotwithgradient must be a dataframe
-      containing at least columns named id, model, b, c, d, e, f and BMD.xfold.")
+    if (scaling)
+    {
+      if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "y0", "maxychange", "BMD.xfold"), cnames)))
+        stop("The first argument of bmdplotwithgradient must be a dataframe
+      containing at least columns named id, model, b, c, d, e, f, y0, maxychange and BMD.xfold.")
+    } else
+    {
+      if (any(!is.element(c("id", "model", "b", "c", "d", "e", "f", "y0", "BMD.xfold"), cnames)))
+        stop("The first argument of bmdplotwithgradient must be a dataframe
+      containing at least columns named id, model, b, c, d, e, f, y0 and BMD.xfold.")
+    }
     
     BMD2plot <- data.frame(x = extendedres$BMD.xfold, id = extendedres$id)
   }
@@ -58,6 +81,8 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
   
   if (missing(xmax))
   {
+    warning(strwrap(prefix = "\n", initial = "\n",
+                    "We recommend you to define xmax at the maximal tested dose."))
     xmax <- max(BMD2plot$x[is.finite(BMD2plot$x)])
   }
   
@@ -144,30 +169,42 @@ bmdplotwithgradient <- function(extendedres, BMDtype = c("zSD", "xfold"),
       b <- extendedres$b[i]
       d <- extendedres$d[i]
       curves2plot$signal[(i-1)*npoints + 1:npoints] <- flin(x2plot, b = extendedres$b[i], 
-                                                            d = extendedres$d[i]) - extendedres$y0[i]*y0shift
+                                                            d = extendedres$d[i]) 
     } else
       if (modeli == "exponential")
       {
         curves2plot$signal[(i-1)*npoints + 1:npoints] <- fExpo(x2plot, b = extendedres$b[i], 
-                                                               d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
+                                                  d = extendedres$d[i], e = extendedres$e[i]) 
       } else
         if (modeli == "Hill")
         {
           curves2plot$signal[(i-1)*npoints + 1:npoints] <- fHill(x2plot, b = extendedres$b[i], c = extendedres$c[i],
-                                                                 d = extendedres$d[i], e = extendedres$e[i]) - extendedres$y0[i]*y0shift
+                                                    d = extendedres$d[i], e = extendedres$e[i]) 
         } else
           if (modeli == "Gauss-probit")
           {
             curves2plot$signal[(i-1)*npoints + 1:npoints] <- fGauss5p(x2plot, b = extendedres$b[i], c = extendedres$c[i],
                                                                       d = extendedres$d[i], e = extendedres$e[i], 
-                                                                      f = extendedres$f[i]) - extendedres$y0[i]*y0shift
+                                                                      f = extendedres$f[i]) 
           } else
             if (modeli == "log-Gauss-probit")
             {
               curves2plot$signal[(i-1)*npoints + 1:npoints] <- fLGauss5p(x2plot, b = extendedres$b[i], c = extendedres$c[i],
                                                                          d = extendedres$d[i], e = extendedres$e[i], 
-                                                                         f = extendedres$f[i]) - extendedres$y0[i]*y0shift
+                                                                         f = extendedres$f[i])
             }
+    if (y0shift) 
+    {
+      if (scaling) 
+      {
+        curves2plot$signal[(i-1)*npoints + 1:npoints] <- 
+          (curves2plot$signal[(i-1)*npoints + 1:npoints] - extendedres$y0[i]) / extendedres$maxychange[i]
+      } else
+      {
+        curves2plot$signal[(i-1)*npoints + 1:npoints] <- 
+          curves2plot$signal[(i-1)*npoints + 1:npoints] - extendedres$y0[i]
+      }
+    }
   }
   
   # no shape no facet

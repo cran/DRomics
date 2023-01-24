@@ -1,7 +1,7 @@
 ### import, check normalize and transform RNAseq data
 
 RNAseqdata <- function(file, backgrounddose, check = TRUE, 
-                       transfo.method = c("rlog", "vst"), 
+                       transfo.method, 
                        transfo.blind = TRUE, round.counts = FALSE)
 {
   if (is.data.frame(file))
@@ -20,13 +20,15 @@ RNAseqdata <- function(file, backgrounddose, check = TRUE,
         stop("The argument file must be a character string ending by .txt.")
     }
     d <- read.table(file, header = FALSE)
+    colnames(d) <- c("item",paste("S", 1:(ncol(d)-1), sep = ""))
     
   }
   nrowd <- nrow(d)
   ncold <- ncol(d)
   data <- as.matrix(d[2:nrowd, 2:ncold]) 
   nrowdata <- nrowd - 1
-
+  ncoldata <- ncold - 1
+  
   if(any(!complete.cases(data)))
     stop("RNAseqdata() should not be used with data including NA values.")
   
@@ -57,7 +59,13 @@ RNAseqdata <- function(file, backgrounddose, check = TRUE,
   }
   
   # Normalization and count data transformation using DESeq2
-  transfo.method <- match.arg(transfo.method, c("rlog", "vst"))
+  if (missing(transfo.method))
+  {
+    if (ncoldata > 30) transfo.method <- "vst" else transfo.method <- "rlog"
+  } else
+  {
+    transfo.method <- match.arg(transfo.method, c("rlog", "vst"))
+  }
   if(transfo.method == "rlog")
     cat(strwrap(paste0("Just wait, the transformation using regularized logarithm (rlog) may take a few minutes.\n")), fill = TRUE)
   
@@ -194,7 +202,7 @@ print.RNAseqdata <- function(x, ...)
                      and tranformed using the following method: ", x$transfo.method)), fill = TRUE)
 }
 
-plot.RNAseqdata <- function(x, ...) 
+plot.RNAseqdata <- function(x, range4boxplot = 1e6, ...) 
 {
   if (!inherits(x, "RNAseqdata"))
     stop("Use only with 'RNAseqdata' objects.")
@@ -205,12 +213,12 @@ plot.RNAseqdata <- function(x, ...)
   par(mfrow = c(1,2), xaxt = "n")
   boxplot(x$raw.counts, xlab = "Samples", ylab = "Raw counts", 
           main = paste("Raw data"), 
-          ylim = c(ymin.rc, ymax.rc), ...) 
+          ylim = c(ymin.rc, ymax.rc), range = range4boxplot, ...) 
   ymin.log <- min(x$data)
   ymax.log <- max(x$data)
   boxplot(x$data, xlab = "Samples", ylab = "Signal", 
           main = paste("Normalized and transformed data"), 
-          ylim = c(ymin.log, ymax.log), ...)   
+          ylim = c(ymin.log, ymax.log), range = range4boxplot, ...)   
   par(def.par)    
 }
 

@@ -17,11 +17,11 @@ variance stabilizing transformation or regularized logarithm.
 }
 
 \usage{
-RNAseqdata(file, backgrounddose, check = TRUE, transfo.method = c("rlog", "vst"), 
+RNAseqdata(file, backgrounddose, check = TRUE, transfo.method, 
           transfo.blind = TRUE, round.counts = FALSE)
 
 \method{print}{RNAseqdata}(x, \dots)
-\method{plot}{RNAseqdata}(x, \dots)
+\method{plot}{RNAseqdata}(x, range4boxplot = 1e6, \dots)
 }
 
 \arguments{
@@ -48,7 +48,8 @@ alternatives are illustrated below in examples.}
 \item{transfo.method}{The method chosen to transform raw counts in a log2 scale
 using the
   \code{DESeq2}: \code{"rlog"} for regularized logarithm or
-  \code{"vst"} for variance stabilizing transformation.}
+  \code{"vst"} for variance stabilizing transformation. If missing, default value
+  defined at \code{"rlog"} for datasets with less than 30 samples and at \code{"vst"} if not}
 
 \item{transfo.blind}{Argument given to function \code{\link{rlog}} or \code{\link{vst}},
   see \code{\link{rlog}} and \code{\link{vst}} for an explaination, by default
@@ -60,6 +61,9 @@ using the
 
 \item{x}{An object of class \code{"RNAseqdata"}.}
 
+\item{range4boxplot}{An argument passed to boxplot(), fixed by default at 1e6 
+to prevent the producing of very large plot files due to many outliers. 
+Can be put at 1.5 to obtain more classical boxplots.}
 
 \item{\dots}{ further arguments passed to print or plot functions.}
 }
@@ -134,7 +138,7 @@ Marie-Laure Delignette-Muller
 #
 datafilename <- system.file("extdata", "RNAseq_sample.txt", package="DRomics")
 (o <- RNAseqdata(datafilename, check = TRUE, transfo.method = "vst"))
-plot(o, range = 1e6)
+plot(o)
 
 # If you want to use your own data set just replace datafilename, 
 # the first argument of RNAseqdata(), 
@@ -151,7 +155,8 @@ plot(o, range = 1e6)
 data(Zhou_kidney_pce)
 subsample <- Zhou_kidney_pce[1:1000, ]
 (o <- RNAseqdata(subsample, check = TRUE, transfo.method = "vst"))
-plot(o, range = 1e6)
+plot(o)
+PCAdataplot(o)
 
 
 # (2) transformation with two methods on the whole data set

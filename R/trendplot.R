@@ -60,5 +60,7 @@ trendplot <- function(extendedres, group,
     if (missing(ncol4faceting)) gg <- gg + facet_wrap(~ facetby) else
       gg <- gg + facet_wrap(~ facetby, ncol = ncol4faceting)
   }
+  
+  gg <- gg + scale_size_continuous(breaks = c(min(dtab$nb_of_items), median(dtab$nb_of_items), max(dtab$nb_of_items)))
   return(gg)
 }

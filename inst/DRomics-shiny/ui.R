@@ -21,7 +21,7 @@ ui <- fluidPage(
     )),
   
   titlePanel(
-    tags$head(tags$link(rel = "icon", type = "image/png", href = "logodromics-dr.png"), tags$title(" DRomics Shiny App"))
+    tags$head(tags$link(rel = "icon", type = "image/png", href = "logodromics-dr.png"), tags$title(" DRomics-shiny"))
   ),
   br(),
   
@@ -30,10 +30,11 @@ ui <- fluidPage(
                       
                       fluidRow(
                         br(), br(), 
-                        HTML("<center><font face=verdana size=6 color=#9c5c16>Welcome to the DRomics Shiny Application</font></center>"),
+                        HTML("<center><font face=verdana size=6 color=#9c5c16>Welcome to the DRomics-shiny application</font></center>"),
+                        HTML("<center><font face=verdana size=5 color=#9c5c16>A first workflow for dose-response modelling</font></center>"),
                         br(), br(),
-                        fixedRow(column(8, offset = 2,
-                                        tags$blockquote("DRomics is a freely available on-line tool for dose-response (or concentration-response) characterization from omics data.
+                        fixedRow(column(10, offset = 1,
+                                        tags$blockquote("DRomics-shiny is a freely available tool for dose-response (or concentration-response) characterization from omics data.
                                              It is especially dedicated to omics data obtained using a typical dose-response design, favoring a great number of tested doses (or concentrations)
                                              rather than a great number of replicates (no need of three replicates).", br(), 
                                                         "After a first optional step which consists to import, check and if needed normalize/transform the data (step 1), the aim of the proposed workflow 
@@ -43,67 +44,48 @@ ui <- fluidPage(
                                                         "In the available version, DRomics supports single-channel microarray data (in log2 scale), RNAseq data (in raw counts) or metabolomics data 
                                              (in log scale). In order to link responses across biological levels based on a common method, DRomics also handles apical data as long as they are continuous and
                                              follow a normal distribution for each dose or concentration, with a common standard error.
-                                             DRomics should not be used on other types of data.", 
-                                                        style="text-align:justify;"),
+                                             DRomics should not be used on other types of data.", br(), br(),
+                                                        "Next, for interpretation of results in light of a biological annotation, you can use the ",
+                                                        a("DRomicsInterpreter-shiny application", href = "https://lbbe-shiny.univ-lyon1.fr/DRomics/inst/DRomicsInterpreter-shiny/", TARGET="_blank", style="color:#f28d0f;"), ".",
+                                                        style="text-align:justify;")
+                                        
+                        )),
+                        fixedRow(column(10, offset = 1,
                                         br(),
-                                        h4("DRomics Shiny App runs on the ", 
+                                        p(strong("Links and resources")),
+                                        p("The DRomics-shiny application runs on the ", 
                                            a("shiny server of the LBBE", href = "http://lbbe-shiny.univ-lyon1.fr/", TARGET="_blank", style="color:#f28d0f;"), 
                                            "with the develoment version of the DRomics package (available on ", 
                                            a("Github", href = "https://github.com/aursiber/DRomics", TARGET="_blank", style="color:#f28d0f;"),")."),
-                                        h4("DRomics is also an R package, available on ", 
+                                        p("DRomics is also an R package, available on ", 
                                            a("CRAN", href = "https://cran.r-project.org/package=DRomics", TARGET="_blank", style="color:#f28d0f;"), 
                                            " and on ",
-                                           a("this web page", href = "https://lbbe.univ-lyon1.fr/fr/dromics", TARGET="_blank", style="color:#f28d0f;"), "."),
-                                        h4("You can find help about the DRomics Shiny App and the DRomics package in a ",
-                                           a("vignette", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_vignette_0.pdf", TARGET="_blank", style="color:#f28d0f;"), " and a ",
-                                           a("cheat sheet", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_cheat_sheet_0.pdf", TARGET="_blank", style="color:#f28d0f;"), "."
-                                           )
-                        )),
-                        hr(style='width: 70%;'),
-                        fixedRow(column(8, offset = 2,
-                                        p(strong("Citation and publications")),
+                                           a("this web page", href = "https://lbbe.univ-lyon1.fr/fr/dromics", TARGET="_blank", style="color:#f28d0f;"), 
+                                           ", where you can find also a vignette and a cheat sheet."),
+                                        
+                                        br(),
+                                        p(strong("Citation")),
                                         p("If you use Dromics Shiny App, you should cite:"),
-                                        p("Larras F, Billoir E, Baillard V, Siberchicot A, Scholz S, Wubet T, Tarkka M, Schmitt-Jansen M and Delignette-Muller ML (2018).", br(),
-                                          em("DRomics: a turnkey tool to support the use of the dose-response framework for omics data in ecological risk assessment."), br(),
+                                        p(em("DRomics: a turnkey tool to support the use of the dose-response framework for omics data in ecological risk assessment."), br(),
+                                          "Larras F, Billoir E, Baillard V, Siberchicot A, Scholz S, Wubet T, Tarkka M, Schmitt-Jansen M and Delignette-Muller ML (2018).", 
                                           "Environmental Science & Technology.",
                                           a("https://doi.org/10.1021/acs.est.8b04752", href = "https://pubs.acs.org/doi/10.1021/acs.est.8b04752", TARGET = "_blank", style="color:#f28d0f;")),
-                                        
-                                        br(),
                                         p("You can freely find this article at: ", a("https://hal.archives-ouvertes.fr/hal-02309919", href = "https://hal.archives-ouvertes.fr/hal-02309919", TARGET = "_blank", style="color:#f28d0f;")),
                                         
-                                        br(),
-                                        p("You can also look at the following citation for a complete example of use:"),
-                                        p("Larras F, Billoir E, Scholz S, Tarkka M, Wubet T, Delignette-Muller ML, Schmitt-Jansen M (2020).", br(),
-                                          em("A multi-omics concentration-response framework uncovers novel understanding of triclosan effects in the chlorophyte Scenedesmus vacuolatus."), br(),
-                                          "Journal of Hazardous Materials.",
-                                          a("https://doi.org/10.1016/j.jhazmat.2020.122727", href = "https://doi.org/10.1016/j.jhazmat.2020.122727", TARGET = "_blank", style="color:#f28d0f;")),
                                         
                                         br(),
-                                        p(strong("Contacts and authors")),
+                                        p(strong("Contact")),
                                         p("If you have any need that is not yet covered, any feedback on the package / Shiny app, or any training needs, feel free to email us at ", strong("dromics@univ-lyon1.fr"), "."),
                                         p("Issues can be reported on",
-                                          a("https://github.com/aursiber/DRomics/issues", href = "https://github.com/aursiber/DRomics/issues", TARGET = "_blank", style="color:#f28d0f;"), "."),
+                                          a("https://github.com/aursiber/DRomics/issues", href = "https://github.com/aursiber/DRomics/issues", TARGET = "_blank", style="color:#f28d0f;"), ".")
                                         
-                                        br(),
-                                        p(a("Elise Billoir", href = "http://bddc.liec.univ-lorraine.fr/cv/BILLOIR%20E.htm", TARGET = "_blank", style="color:#f28d0f;"),
-                                          "- elise.billoir@univ-lorraine.fr - Laboratoire Interdisciplinaire des Environnements Continentaux - Université de Lorraine - Metz - France"),
-                                        p(a("Marie-Laure Delignette-Muller", href = "https://lbbe.univ-lyon1.fr/fr/annuaires-des-membres/delignette-muller-marie-laure", TARGET = "_blank", style="color:#f28d0f;"),
-                                          "- marielaure.delignettemuller@vetagro-sup.fr - Laboratoire de Biométrie et Biologie Evolutive - VetAgro Sup - Lyon - France"),
-                                        p(a("Floriane Larras", href = "https://www.researchgate.net/profile/Floriane_Larras", TARGET = "_blank", style="color:#f28d0f;"),
-                                          "- floriane.larras@inrae.fr - Delegation for scientific expertise, foresight and advanced studies (DEPE) - INRAE - Paris - France"),
-                                        p(a("Mechthild Schmitt-Jansen", href = "https://www.ufz.de/index.php?en=38467", TARGET = "_blank", style="color:#f28d0f;"),
-                                          "- mechthild.schmitt@ufz.de - Department of Bioanalytical Ecotoxicology - Helmholtz Center for Environmental Research GmbH - Leipzig - Germany"),
-                                        p(a("Aurélie Siberchicot", href = "https://lbbe.univ-lyon1.fr/fr/annuaires-des-membres/siberchicot-aurelie", TARGET = "_blank", style="color:#f28d0f;"),
-                                          "- aurelie.siberchicot@univ-lyon1.fr - Laboratoire de Biométrie et Biologie Evolutive - Université Lyon 1 - Lyon - France")
                                         
                         )),
-                        hr(style='width: 70%;'),
+                        hr(style='width: 80%;'),
+                        br(),
                         fixedRow(column(10, offset = 2,
-                                        p("Grant Agreement number: 705149 - MicroERA - H2020-MSCA-IF-2015"),
-                                        p("Horizon 2020"),
-                                        br(), br(),
-                                        fillRow(flex = 0.11,
-                                          a(img(src = "https://lbbe.univ-lyon1.fr/sites/default/files/icons/logo_1.svg", width = 120), href="https://lbbe.univ-lyon1.fr/", TARGET="_blank"),
+                                        fillRow(flex = NA,
+                                          a(img(src = "https://lbbe.univ-lyon1.fr/sites/default/files/icons/logo_1.svg", width = 220), href="https://lbbe.univ-lyon1.fr/", TARGET="_blank"),
                                           a(img(src = "logoVetAgroSup.jpg", height = 100, width = 120), href="http://www.vetagro-sup.fr/", TARGET="_blank"),
                                           a(img(src = "logoLyon1.png", height = 80, width = 380), href="https://www.univ-lyon1.fr/", TARGET="_blank"),
                                           a(img(src = "logoLiec.png", height = 70, width = 100), href="http://liec.univ-lorraine.fr/", TARGET="_blank"),
@@ -173,7 +155,7 @@ ui <- fluidPage(
                                       accept = c('.csv', '.txt')),
                             h5("See ", a("here", href = "informations_datafile_input.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the format required"),
                             h5("See ", a("here", href = "DRomicspkg/RNAseq_sample.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;", download = 'RNAseq_sample.txt'), " an example file"),
-                            icon("exclamation-triangle"), "Be aware that counts are automatically rounded to ensure compatibility of counts from Kallisto or Salmon with the tool.",
+                            icon("triangle-exclamation"), "Be aware that counts are automatically rounded to ensure compatibility of counts from Kallisto or Salmon with the tool.",
                             br(), br(),
                             splitLayout(cellWidths = c("40%", "60%"),
                                         textInput('bgdose_rnaseq', "Background dose", 0),
@@ -205,7 +187,7 @@ ui <- fluidPage(
                                         bsPopover("bgdose_help3", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
                             ),
                             hr(), 
-                            icon("exclamation-triangle"), "We recommend you to check that your metabolomics data were correctly pretreated before importation. In particular data (metabolomic signal) should have been log-transformed, without replacing 0 values by NA values (consider using the half minimum method instead for example).",
+                            icon("triangle-exclamation"), "We recommend you to check that your metabolomics data were correctly pretreated before importation. In particular data (metabolomic signal) should have been log-transformed, without replacing 0 values by NA values (consider using the half minimum method instead for example).",
                             h5("See ", a("here", href = "informations_metabolo_pretreatment.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " more information about metabolomics data pretreatment")
                           ),
                           
@@ -225,7 +207,7 @@ ui <- fluidPage(
                                         bsPopover("bgdose_help4", "", text_bgdose, placement = "right", trigger = "hover", options = NULL)
                             ),
                             hr(), 
-                            icon("exclamation-triangle"),
+                            icon("triangle-exclamation"),
                             "We recommend you to check that your anchoring data are continuous and expressed in a scale that enables the use of a normal error model (a transformation of data may be needed for some endpoints). If this assumption is not respected, results of selection and further steps may be inaccurate."
                           ),
                           
@@ -242,6 +224,11 @@ ui <- fluidPage(
                           verbatimTextOutput('printOmicData'),
                           br(),
                           withSpinner(plotOutput("plotOmicData", width = "100%", height = "900px"), type = 4, color = '#9c5c16'),
+                          br(),
+                          conditionalPanel(
+                            condition = "input.typeData != 'continuousanchoringdata'",
+                            withSpinner(plotOutput("plotPCAData", width = "100%", height = "900px"), type = 4, color = '#9c5c16')
+                          ),
                           br()
                         )
                       )
@@ -271,7 +258,7 @@ ui <- fluidPage(
                                    hr(),
                                    fixedRow(
                                      column(12, align="center",
-                                            actionButton("buttonRunStep2", "Run", icon = icon("fas fa-cog"), style='font-size:200%')
+                                            actionButton("buttonRunStep2", "Run", icon = icon("fas fa-gear"), style='font-size:200%')
                                      )
                                    ), br(), 
                                    fixedRow(
@@ -307,7 +294,7 @@ ui <- fluidPage(
                                      )),
                                    br(),
                                    h5("See ", a("here", href = "informations_modelling_procedure.txt", TARGET = "_blank", style="text-decoration:underline; color:#9c5c16;"), " information about the dose reponse modelling procedure"),
-                                   icon("exclamation-triangle"),
+                                   icon("triangle-exclamation"),
                                    "These ongoing calculations can take from minutes to about an hour. Your patience should be proportional to the size of your data and the chosen FDR.",
                                    hr(), 
                                    radioButtons('plottypeDrcfit', 
@@ -493,11 +480,8 @@ ui <- fluidPage(
                       fixedRow(
                         column(8, 
                                br(), HTML("<font face=verdana size=5 color=#9c5c16><b>R CODE TO GO FURTHER</b></font>"), br(), br(), br(),
-                               tags$blockquote("To see what more you can do using the R package, we recommend you to consult the ", 
-                                               a("vignette", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_vignette_0.pdf", TARGET="_blank", style="color:#f28d0f;"),
-                                               " and the ", 
-                                               a("cheat sheet", href = "https://lbbe.univ-lyon1.fr/sites/default/files/media/downloads/dromics_cheat_sheet_0.pdf", TARGET="_blank", style="color:#f28d0f;"),
-                                               " of the package."), 
+                               tags$blockquote("To see what more you can do using the R package, we recommend you to consult the vignette and the cheat sheet", 
+                                               "(links to all resources ", a("here", href = "https://lbbe.univ-lyon1.fr/fr/dromics", TARGET="_blank", style="color:#f28d0f;"),")."), 
                                br(), 
                                downloadButton("buttonDownRCode", "Download R Code", icon = icon("fas fa-download"), style = 'background-color:#e6e6e6; color:#000000; border-color:#9d9d9d;'), br(), br(),
                                verbatimTextOutput('printRCode'), br(), br(),
