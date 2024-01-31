@@ -6,7 +6,8 @@
 sensitivityplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
                             group, ECDF_plot = TRUE, colorby,
                             BMDsummary = c("first.quartile", "median" , "median.and.IQR"),
-                            BMD_log_transfo = FALSE)
+                            BMD_log_transfo = TRUE,
+                            line.size = 0.5, line.alpha = 0.5, point.alpha = 0.5)
 {
   BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
   BMDsummary <- match.arg(BMDsummary, c("first.quartile", "median", "median.and.IQR"))
@@ -23,8 +24,7 @@ sensitivityplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
       stop("The first argument of sensitivityplot must be a dataframe
       containing a column named BMD.zSD and other columns coding for group of items.")
     variable <- extendedres[, "BMD.zSD"]
-  }
-  else 
+  } else 
   {
     if (any(!is.element(c("BMD.xfold"), cnames)))
       stop("The first argument of sensitivityplot must be a dataframe
@@ -49,9 +49,9 @@ sensitivityplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
   }
   
   
-   firstquartilefun <- function(x) quantile(x, probs = 0.25, na.rm = TRUE)
-   secondquartilefun <- function(x) quantile(x, probs = 0.5, na.rm = TRUE)
-   thirdquartilefun <- function(x) quantile(x, probs = 0.75, na.rm = TRUE)
+   firstquartilefun <- function(x) stats::quantile(x, probs = 0.25, na.rm = TRUE)
+   secondquartilefun <- function(x) stats::quantile(x, probs = 0.5, na.rm = TRUE)
+   thirdquartilefun <- function(x) stats::quantile(x, probs = 0.75, na.rm = TRUE)
   
   if (missing(colorby))
   {
@@ -89,45 +89,61 @@ sensitivityplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
   if (BMDsummary == "first.quartile")
   {
     if (missing(colorby))
-      gg <- ggplot(dnb, aes_(x = quote(groupby), y = quote(firstquartile), 
-                             size = quote(nb_of_items)))
-    else
-      gg <- ggplot(dnb, aes_(x = quote(groupby), y = quote(firstquartile), 
-                             color = quote(level), alpha = I(0.8),
-                             size = quote(nb_of_items))) 
+    {
+      gg <- ggplot(dnb, aes(x = .data$groupby, y = .data$firstquartile, 
+                             size = .data$nb_of_items))
+    } else
+    {  
+      gg <- ggplot(dnb, aes(x = .data$groupby, y = .data$firstquartile, 
+                             color = .data$level, 
+                             size = .data$nb_of_items))
+    }
     
-    gg <- gg + geom_point(stat = 'identity')  +  coord_flip() +
+    gg <- gg + geom_point(stat = 'identity', alpha = point.alpha)  +  coord_flip() +
       labs(x = "", y = "BMD 25th quantiles") 
     
   } else {
     if (missing(colorby))
-      gg <- ggplot(dnb, aes_(x = quote(groupby), y = quote(secondquartile), 
-                             size = quote(nb_of_items))) 
-    else {
+    {
+      gg <- ggplot(dnb, aes(x = .data$groupby, y = .data$secondquartile, 
+                             size = .data$nb_of_items)) 
+    } else {
       if (BMDsummary == "median") {
-        gg <- ggplot(dnb, aes_(x = quote(groupby), y = quote(secondquartile), 
-                               color = quote(level), 
-                               size = quote(nb_of_items)))
+        gg <- ggplot(dnb, aes(x = .data$groupby, y = .data$secondquartile, 
+                               color = .data$level, 
+                               size = .data$nb_of_items))
       } else {
-        gg <- ggplot(dnb, aes_(x = quote(groupby), y = quote(secondquartile), 
-                               color = quote(level), alpha = I(0.5),
-                               size = quote(nb_of_items)))
+        gg <- ggplot(dnb, aes(x = .data$groupby, y = .data$secondquartile, 
+                               color = .data$level, 
+                               size = .data$nb_of_items))
       }
     }
-    gg <- gg + geom_point(stat = 'identity') + coord_flip() 
+    gg <- gg + geom_point(stat = 'identity', alpha = point.alpha) + coord_flip() 
     
     if (BMDsummary == "median")
-      gg <- gg + labs(x = "", y = "BMD medians") else
-        gg <- gg + geom_errorbar(aes_(ymin = quote(firstquartile), 
-                                      ymax = quote(thirdquartile), size = I(1)), 
-                                 width = 0) +
-                # line to remove lines on the size legend
-                guides(size = guide_legend(override.aes = list(linetype = 0))) +
-                labs(x = "", y = "BMD medians and IQRs")
-   }    
+    {
+      gg <- gg + labs(x = "", y = "BMD medians") 
+    } else {
+      gg <- gg + geom_errorbar(aes(ymin = .data$firstquartile, 
+                                    ymax = .data$thirdquartile),
+                               linewidth = line.size, 
+                               alpha = line.alpha,
+                               width = 0) +
+        # line to remove lines on the size legend
+        guides(size = guide_legend(override.aes = list(linetype = 0))) +
+        labs(x = "", y = "BMD medians and IQRs")
+      }
+  }    
   if (BMD_log_transfo)
     gg <- gg + scale_y_log10()
   
-  gg <- gg + scale_size_continuous(breaks = c(min(dnb$nb_of_items), median(dnb$nb_of_items), max(dnb$nb_of_items)))
+  if (!missing(colorby))
+  {
+    gg <- gg + labs(color = colorby)
+  }
+  
+  round.quartiles.minmax <- unique(round(quantile(dnb$nb_of_items, probs = c(0, 0.25, 0.5, 0.75, 1))))
+  gg <- gg + scale_size_continuous(breaks = as.numeric(round.quartiles.minmax)) + 
+            labs(size = "nb. of items")
   return(gg)
 }

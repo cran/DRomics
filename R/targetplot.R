@@ -1,5 +1,5 @@
 # Plot of raw data and fitted curves if there is for target items 
-targetplot <- function(items, f, add.fit = TRUE, dose_log_transfo = FALSE)
+targetplot <- function(items, f, add.fit = TRUE, dose_log_transfo = TRUE)
 {
   if (!inherits(f, "drcfit"))
     stop("Use only with 'drcfit' objects, created with the function drcfit.")
@@ -80,7 +80,7 @@ targetplot <- function(items, f, add.fit = TRUE, dose_log_transfo = FALSE)
   dataobs$id <- factor(dataobs$id, levels = items)
   dataobsmean$id <- factor(dataobsmean$id, levels = items)
 
-  g <- ggplot(dataobs, aes_(x = quote(dose), y = quote(signal))) + geom_point(shape = 1) +
+  g <- ggplot(dataobs, aes(x = .data$dose, y = .data$signal)) + geom_point(shape = 1) +
     facet_wrap(~ id, scales = "free_y") +
     geom_point(data = dataobsmean, shape = 19) + theme_classic()
   

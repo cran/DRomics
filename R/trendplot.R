@@ -38,12 +38,15 @@ trendplot <- function(extendedres, group,
     colnames(dtab) <- c("group","trend", "nb_of_items")
     dtab <- dtab[dtab$nb_of_items != 0, ]
     if (add.color)
-      gg <- ggplot(dtab, aes_(x = quote(trend), y = quote(group), colour = quote(trend))) + 
-        geom_point(aes_(size = quote(nb_of_items)))
-    else
-      gg <- ggplot(dtab, aes_(x = quote(trend), y = quote(group))) +
-        geom_point(aes_(size = quote(nb_of_items)))
-    
+    {
+      gg <- ggplot(dtab, aes(x = .data$trend, y = .data$group, colour = .data$trend)) + 
+        geom_point(aes(size = .data$nb_of_items))
+      
+    } else
+    {
+      gg <- ggplot(dtab, aes(x = .data$trend, y = .data$group)) +
+        geom_point(aes(size = .data$nb_of_items))
+    }
   } else {
     dtab <- as.data.frame(table(extendedres[, group], 
                                 extendedres[, "trend"],
@@ -51,16 +54,23 @@ trendplot <- function(extendedres, group,
     colnames(dtab) <- c("group", "trend", "facetby", "nb_of_items")
     dtab <- dtab[dtab$nb_of_items != 0, ]
     if (add.color)
-      gg <- ggplot(dtab, aes_(x = quote(trend), y = quote(group), colour = quote(trend))) +
-        geom_point(aes_(size = quote(nb_of_items)))
-    else
-      gg <- ggplot(dtab, aes(x = quote(trend), y = quote(group))) +
-        geom_point(aes_(size = quote(nb_of_items)))
+    {
+      gg <- ggplot(dtab, aes(x = .data$trend, y = .data$group, colour = .data$trend)) +
+        geom_point(aes(size = .data$nb_of_items)) 
+    } else
+    {
+      gg <- ggplot(dtab, aes(x = .data$trend, y = .data$group)) +
+        geom_point(aes(size = .data$nb_of_items))
+    }
     
-    if (missing(ncol4faceting)) gg <- gg + facet_wrap(~ facetby) else
-      gg <- gg + facet_wrap(~ facetby, ncol = ncol4faceting)
+    if (missing(ncol4faceting)) 
+      {gg <- gg + facet_wrap(~ facetby)} else
+      {gg <- gg + facet_wrap(~ facetby, ncol = ncol4faceting)}
   }
   
-  gg <- gg + scale_size_continuous(breaks = c(min(dtab$nb_of_items), median(dtab$nb_of_items), max(dtab$nb_of_items)))
+  round.quartiles.minmax <- unique(round(quantile(dtab$nb_of_items, probs = c(0, 0.25, 0.5, 0.75, 1))))
+  gg <- gg + scale_size_continuous(breaks = as.numeric(round.quartiles.minmax)) + 
+    labs(size = "nb. of items")
+  
   return(gg)
 }

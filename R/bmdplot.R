@@ -5,10 +5,11 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
                                     add.CI = FALSE, 
                                     facetby, facetby2, 
                                     shapeby,  colorby,
-                                   point.size = 1,
-                                   ncol4faceting, 
+                                    point.size = 1.5, point.alpha = 0.8,
+                                    line.size = 0.5, line.alpha = 0.8,
+                                    ncol4faceting, 
                                    add.label = FALSE, label.size = 2,
-                                    BMD_log_transfo = FALSE)
+                                    BMD_log_transfo = TRUE)
 {
   BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
 
@@ -25,12 +26,15 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
       containing at least columns named id and BMD.zSD.")
     
     if (add.CI)
+    {
       BMD2plot <- data.frame(x = extendedres$BMD.zSD, id = extendedres$id,
                              upper = extendedres$BMD.zSD.upper,
-                             lower = extendedres$BMD.zSD.lower) else
+                             lower = extendedres$BMD.zSD.lower)
+    } else
+    {
       BMD2plot <- data.frame(x = extendedres$BMD.zSD, id = extendedres$id)
-  }
-  else 
+    }
+  } else 
   {
     if (any(!is.element(c("id", "BMD.xfold"), cnames)))
       stop("The first argument of bmdplot must be a dataframe
@@ -96,15 +100,15 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
       ntoti <- length(indi)
       BMD2plot$ECDF[indi] <- (rank(BMD2plot$x[indi], ties.method = "first") - 0.5) / ntoti
     }
-    gg <- ggplot(data = BMD2plot, mapping = aes_(x = quote(x), y = quote(ECDF), 
-                                                label = quote(id))) 
+    gg <- ggplot(data = BMD2plot, mapping = aes(x = .data$x, y = .data$ECDF, 
+                                                label = .data$id)) 
     if (missing(facetby2)) gg <- gg + facet_wrap(~ facetby) else gg <- gg + facet_grid(facetby2 ~ facetby)
     
   } else
   {
     BMD2plot$ECDF <- (rank(BMD2plot$x, ties.method = "first") - 0.5) / ntot
-    gg <- ggplot(data = BMD2plot, mapping = aes_(x = quote(x), y = quote(ECDF),
-                                                label = quote(id)))
+    gg <- ggplot(data = BMD2plot, mapping = aes(x = .data$x, y = .data$ECDF,
+                                                label = .data$id))
   }
 
   if (!missing(facetby))
@@ -112,8 +116,7 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
     if (!missing(facetby2)) 
     {
       gg <- gg + facet_grid(facetby2 ~ facetby) 
-    }
-    else
+    } else
     {
       if (missing(ncol4faceting))
       {
@@ -130,26 +133,44 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
   if (!missing(shapeby))
   {
     if (!missing(colorby))
-      gg <- gg + geom_point(data = BMD2plot, mapping = aes_(shape = quote(shapeby),
-                            color = quote(colorby)), size = point.size) else
-      gg <- gg + geom_point(data = BMD2plot, mapping = aes_(shape = quote(shapeby)),
-                        size = point.size)
+    {
+      gg <- gg + geom_point(data = BMD2plot, mapping = aes(shape = .data$shapeby,
+                 color = .data$colorby), size = point.size, alpha = point.alpha) 
+    } else
+    {
+      gg <- gg + geom_point(data = BMD2plot, mapping = aes(shape = .data$shapeby),
+                            size = point.size, alpha = point.alpha)
+    }
   } else
   {
     if (!missing(colorby))
+    {
       gg <- gg + geom_point(data = BMD2plot, 
-                mapping = aes_(color = quote(colorby)),size = point.size) else
-        gg <- gg + geom_point(data = BMD2plot, size = point.size)
+                            mapping = aes(color = .data$colorby), 
+                            size = point.size, alpha = point.alpha)
+    } else
+    {
+      gg <- gg + geom_point(data = BMD2plot, size = point.size, alpha = point.alpha)
+    }
   }
   
   # Add of CIs
   if (add.CI)
   {
     if (!missing(colorby))
-      gg <- gg + geom_errorbarh(aes_(xmin = quote(lower), xmax = quote(upper),
-                                     color = quote(colorby)), height = 0) else
-      gg <- gg + geom_errorbarh(aes_(xmin = quote(lower), xmax = quote(upper)),  
-                                               height = 0)              
+    {
+      gg <- gg + geom_errorbarh(aes(xmin = .data$lower, xmax = .data$upper,
+                                     color = .data$colorby), 
+                                height = 0, 
+                                linewidth = line.size,
+                                alpha = line.alpha)
+    } else
+    {
+      gg <- gg + geom_errorbarh(aes(xmin = .data$lower, xmax = .data$upper),  
+                                height = 0,
+                                linewidth = line.size,
+                                alpha = line.alpha)
+    }                
   }
   
   # Add of labels
@@ -166,6 +187,17 @@ bmdplot <- function(extendedres, BMDtype = c("zSD", "xfold"),
     gg <- gg + scale_x_log10()
   
   gg <- gg + xlab("BMD")
+  
+  if (!missing(shapeby))
+  {
+    gg <- gg + labs(shape = shapeby)
+  }
+  
+  if (!missing(colorby))
+  {
+    gg <- gg + labs(color = colorby)
+  }
+  
     
   return(gg)
 }

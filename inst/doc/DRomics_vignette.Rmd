@@ -5,7 +5,7 @@ date: '`r Sys.Date()`'
 output:
   html_vignette:
   # pdf_document:
-    toc: yes
+    toc: true
     number_sections: yes
     toc_depth: 4
 urlcolor: blue
@@ -17,6 +17,8 @@ vignette: >
   %\VignetteIndexEntry{Overview of the DRomics package} 
   %!\VignetteEncoding{UTF-8}
   \usepackage[utf8]{inputenc}
+pkgdown:
+  as_is: true
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
@@ -41,7 +43,8 @@ DRomics is a freely available tool for dose-response (or concentration-response)
 After a first step which consists in **importing**, **checking** and if needed **normalizing/transforming** the data ([step 1](#step1)), the aim of the proposed workflow is to **select monotonic and/or biphasic significantly responsive items** (e.g. probes, contigs, metabolites) ([step 2](#step2)), to **choose the best-fit model** among a predefined family of monotonic and biphasic models to describe the response of each selected item ([step 3](#step3)), and to **derive a benchmark dose** or concentration from each fitted curve ([step 4](#step4)). Those steps can be performed in R using DRomics functions, or using the **shiny application named DRomics-shiny**.
 
 In the available version, DRomics supports **single-channel microarray data** (in log2 scale), **RNAseq data** (in raw counts) and
-other **continuous omics data** such as metabolomics or proteomics (in log scale). In order to link responses across biological levels based on a common method, DRomics also handles **continuous apical data** as long as they meet the use conditions of **least squares regression** (homoscedastic Gaussian regression, see the [section on least squares](#leastsquares) for a reminder if needed).
+other **continuous omics data** (in log scale), such as metabolomics data calculated from AUC values (area under the curve), or proteomics data when expressed as protein abundance from peak intensity values. Proteomics data expressed in spectral counts could be analyzed as RNAseq data using raw counts
+after carefully checking the validity of the assumptions made in processing the RNAseq data. In order to link responses across biological levels based on a common method, DRomics also handles **continuous apical data** as long as they meet the use conditions of **least squares regression** (homoscedastic Gaussian regression, see the [section on least squares](#leastsquares) for a reminder if needed).
 
 As built in the environmental risk assessment context where omics data are more often collected on non-sequenced species or species communities, DRomics does not provide an annotation pipeline. 
 The **annotation of items selected by DRomics** may be complex in this context, and **must be done outside DRomics** using databases such as KEGG or Gene Ontology.
@@ -97,7 +100,9 @@ that is provided on the last page of each of the two shiny applications.
 Whatever the type of data imported in DRomics (e.g. RNAseq, microarray, metabolomic data),
 data can be imported from a .txt file (e.g. "mydata.txt") organized with **one row per item** (e.g. transcript, probe, metabolite) and **one column per sample**. In **an additional first row**, after a name for the item identifier (e.g. "id"), we must have the **tested doses or concentrations in a numeric format** for the corresponding sample
 (for example, if there are triplicates for each treatment, the first line could be "item", 0, 0, 0, 0.1, 0.1, 0.1, etc.). An **additional first column** must give the **identifier of each item** (identifier of the probe, transcript, metabolite, ..., or name of the endpoint for anchoring data), 
-and the other columns give the responses of the item for each sample.  This file will be imported within DRomics using an internal call to the function read.table() with its default field separator (sep argument). 
+and the other columns give the responses of the item for each sample.  This file will be imported within DRomics using an internal call to the function read.table() with its default field separator (sep argument)
+and its default decimal separator (dec argument at "."). So remember, if necessary, to 
+**transform another decimal separator (e.g. ",") in "." before importing your data**.
 
 Different examples of .txt files formatted for the DRomics workflow
 are available in the package, such as the one named 
@@ -201,7 +206,7 @@ on the is condition).
 
 + **RNAseqdata()** should be used to import **RNAseq as counts of reads** (for details look at the example with [RNAseq data](#RNAseqexample)),
 + **microarraydata()** should be used to import **single-channel microarray data in log2 scale** (for details look at the example with [microarray data](#microarrayexample)),
-+ **continuousomicdata()** should be used to import **other continuous omics data** such as metabolomics, proteomics,..., **in a scale that enables the use of a Gaussian error model** (for details look at the example with [metabolomic omics data](#metabolomicexample)).
++ **continuousomicdata()** should be used to import **other continuous omics data** such as metabolomics data, or proteomics data (only when expressed in intensity),..., **in a scale that enables the use of a Gaussian error model** (for details look at the example with [metabolomic omics data](#metabolomicexample)).
 
 It is also possible to import in DRomics **continuous anchoring data** measured at the apical level,
 especially for **sake of comparison of benchmark doses** (see [Step 4](#step4) for definition of BMD) estimated **at different levels of organization** but using **the same metrics**. 
@@ -294,7 +299,8 @@ The plot of the output shows the distribution of the signal over all the metabol
 
 The deprecated metabolomicdata() function was renamed continuousomicdata() in the recent versions
 of the package (while keeping the first name available) 
-to **offer its use to other continuous omic data** such as **proteomics data** or **RT-qPCR data**. 
+to **offer its use to other continuous omic data** such as **proteomics data** (when expressed
+in intensity) or **RT-qPCR data**. 
 As for metabolomic data, the **pre-treatment** of other continuous omic data must be done **before importation**, 
 and **data must be imported in a scale that enables the use of a 
 Gaussian error model** as this strong hypothesis is required both for selection of items and for dose-response modeling.
@@ -316,7 +322,7 @@ on *in situ* data](#insitudata) for details on this point).
 
 ```{r, fig.width = 7, fig.height = 3}
 (o.anchoring <- continuousanchoringdata(anchoringfilename, backgrounddose = 0.1))
-plot(o.anchoring)
+plot(o.anchoring) + theme_bw()
 ```
 
 For such data the plot() function simply provides a dose-response plot for each endpoint.
@@ -418,7 +424,7 @@ data4DRomics <- formatdata4DRomics(signalmatrix = zebraf$counts,
 (o <- RNAseqdata(data4DRomics))
 
 # PCA plot to visualize the batch effect
-PCAdataplot(o, batch = zebraf$batch)
+PCAdataplot(o, batch = zebraf$batch) + theme_bw()
 ```
 
 The PCA plot shows an impact of the batch effect, that clearly appears
@@ -439,11 +445,12 @@ BECdata4DRomics <- formatdata4DRomics(signalmatrix = BECcounts,
 o.BEC <- RNAseqdata(BECdata4DRomics)
 
 # PCA plot after batch effect correction
-PCAdataplot(o.BEC, batch = zebraf$batch)
+PCAdataplot(o.BEC, batch = zebraf$batch) + theme_bw()
 ```
 
 The PCA plot after BEC shows the impact of the correction on the batch effect
 that is no more visible on controls (red points).
+
 
 
 ## Step 2: selection of significantly responding items {#step2}
@@ -459,7 +466,7 @@ The **false discovery rate (FDR) corresponds to the expected proportion of items
 on an FDR not only **to reduce the number of items to be further processed**, but also **to remove too noisy dose-response signals that may impair the quality of the results**.
 We recommend to set a value between 0.001 and 0.1 depending of the initial number of items. 
 When this number is very high (more than several tens of thousands),
-we recommend a FDR less than 0.05 (0.001 to 0.01) to increase the robustness of the results ([Larras et al. 2018](https://hal.archives-ouvertes.fr/hal-02309919/document)).
+we recommend a FDR less than 0.05 (0.001 to 0.01) to increase the robustness of the results ([Larras et al. 2018](https://hal.science/hal-02309919/document)).
 
 Concerning the method used for selection, **we recommend the default choice ("quadratic") for a typical omics dose-response design (many doses/concentrations with few replicates per condition)**. It enables the **selection of both monotonic and biphasic dose-response relationships**. If you want to focus on monotonic dose-response relationships, the "linear" method could be chosen. For a design with a small number of doses/concentrations and many replicates 
 (not optimal for dose-response modeling), the "ANOVA" method could be preferable.
@@ -474,9 +481,25 @@ and by classical **linear regression** using the lm() function for **continuous 
 The adjustment of p-values according to the specified FDR is performed in any case, even for 
 continuous anchoring data, so as to ensure the unicity of the workflow independently of the type of data.
 
-See ?itemselect for more details and [Larras et al. 2018](https://hal.archives-ouvertes.fr/hal-02309919/document) 
+See ?itemselect for more details and [Larras et al. 2018](https://hal.science/hal-02309919/document) 
 comparison of the three proposed methods on an example.
 
+It is easy, using for example the package **VennDiagram**, to compare the selection of items obtained using 
+two different methods, as in the following example. 
+
+```{r, results = "hide"}
+require(VennDiagram)
+s_lin <- itemselect(o.microarray, select.method = "linear", FDR = 0.01)
+index_quad <- s_quad$selectindex
+index_lin <- s_lin$selectindex
+plot(c(0,0), c(1,1), type = "n", xaxt = "n", yaxt = "n", bty = "n", xlab = "", ylab = "")
+draw.pairwise.venn(area1 = length(index_quad), area2 = length(index_lin), 
+                   cross.area = length(which(index_quad %in% index_lin)), 
+                   category = c("quadratic trend test", "linear trend test"),
+                   cat.col=c("cyan3", "darkorange1"), col=c("black", "black"), 
+                   fill = c("cyan3", "darkorange1"), lty = "blank", cat.pos = c(1,11))
+
+```
 
 ## Step 3: fit of dose-response models, choice of the best fit for each curve {#step3}
 
@@ -485,9 +508,9 @@ comparison of the three proposed methods on an example.
 For Step 3 the function drcfit() simply **takes as input in a first argument the output of itemselect()**.
 For each item selected in Step 2, the model that best fits the dose-response data is chosen among 
 a **family of five simple models built to describe a wide variety of monotonic and biphasic dose-response curves (DRC)** (and exclusively monotonic and biphasic curves : it is why more flexible models such as
-polynomial third and fourth order classical polynomial models were deliberately not considered). For a complete description of those models see the [last section of Step 3](#models) or [Larras et al. 2018](https://hal.archives-ouvertes.fr/hal-02309919/document). 
+polynomial third and fourth order classical polynomial models were deliberately not considered). For a complete description of those models see the [last section of Step 3](#models) or [Larras et al. 2018](https://hal.science/hal-02309919/document). 
 
-The procedure used to **select the best fit** is based on an **information criterion** as described in [Larras et al. 2018](https://hal.archives-ouvertes.fr/hal-02309919/document) and in ?drcfit. 
+The procedure used to **select the best fit** is based on an **information criterion** as described in [Larras et al. 2018](https://hal.science/hal-02309919/document) and in ?drcfit. 
 The **classical** and **former default option** of the **AIC**
 (Akaike criterion -
 default information criterion used in DRomics versions
@@ -531,9 +554,13 @@ saved in a pdf file using the plotfit2pdf() function (see ?drcfit).
 plot(f) 
 ```
 
-The fitted curves may be **represented using a log scale** for dose/concentration, 
-which will be more suited in case where the range of observed doses/concentrations is very wide,
-using argument `dose_log_transfo` (see ?drcfit for details and examples).
+The fitted curves are by default **represented using a log scale** for dose/concentration, 
+which is more suited in common cases where the range of observed doses/concentrations is very wide
+and/or where tested doses/concentrations are obtained by dilutions. 
+Use `dose_log_transfo = FALSE` to use the raw scale of doses (see ?drcfit for details and examples).
+It is why the observations at the control appear differently as the other observations, 
+as half circles on the y-axis, to remind that their true value is 
+minus infinity in a log scale.
 
 Another **specific plot function named targetplot() can be used to plot targeted items, whether they were or not selected** in step 2 and fitted in step 3. See an example below and details in ?targetplot
 
@@ -595,7 +622,8 @@ $\Phi$ represents the cumulative distribution function (CDF) of the standard Gau
 As the previous one, this model encompasses **two simplifed versions with 4 parameters**, one **monotonic** (for $f=0$) and one with **symmetrical asymptotes** (for $c=d$).
 
 This family of five models was built to be able to describe a wide range of monotonic and biphasic
-DRC. In the following plot were represented typologies of curves that can be described using those models, depending of the definition of their parameters.
+DRC. In the following plot were represented typologies of curves that can be described using those models, depending of the definition of their parameters. In the following plot the curves are represented with the signal in y-axis and the raw dose in x-axis. **As the range of tested or observed doses is often large**, we decided to plot model fits 
+**by default using a log scale of doses**. The **shape of models will be transformed in this log x-scale**, and **especially the linear model will no more appear as a straight line as below**. 
 
 ```{r, echo = FALSE, results = "hide", fig.height=8, fig.width = 8}
 par(mfrow = c(4,4), mar = c(0,0,0,0), xaxt = "n", yaxt = "n")
@@ -708,7 +736,7 @@ sapply(1:7, tracenormale)
 The **two types of benchmark doses (BMD-zSD and BMD-xfold) proposed by the [EFSA (2017)](https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2017.4658) are systematically calculated**
 for each fitted dose-response curve using the function **bmdcalc()** with the output
 of the drcfit() function as a first argument, 
-**but we strongly recommend the use of the first one (BMD-zSD)** for reasons explained in [Larras et al. 2018](https://hal.archives-ouvertes.fr/hal-02309919/document) 
+**but we strongly recommend the use of the first one (BMD-zSD)** for reasons explained in [Larras et al. 2018](https://hal.science/hal-02309919/document) 
 (see ?bmdcalc for details on this function).
 
 
@@ -734,13 +762,23 @@ on our example. BMD values are coded `NA` when the BMR stands within the
 range of response values defined by the model but outside the range of tested doses,
 and `NaN` when the BMR stands outside 
 the range of response values defined by the model due to asymptotes.  
+Very low BMD values obtained by extrapolation between
+0 and the smallest non null tested dose, 
+that correspond to very sensitive items (that we do not want to exclude),
+are thresholded at minBMD, an argument by default fixed at the smallest non null 
+tested dose divided by 100, but that can be fixed by the user as what he
+considers to be a negligible dose.
+
 An extensive description of the outputs of the complete DRomics workflow is provided in the 
 [last section of the main workflow](#outputs). 
-You can also see ?bmdcalc for a complete description of the columns of the output data frame.
+You can also see ?bmdcalc for a complete description of its arguments and
+of the columns of its output data frame.
 
 ```{r}
 head(r$res)
 ```
+
+<!-- Ajout d'une explication sur minBMD (ML) -->
 
 ### Plots of the BMD distribution
 
@@ -748,13 +786,14 @@ The default plot of the output of the bmdcalc() function provides the distributi
 (Empirical Cumulative Density Function) plot for the chosen BMD ("zSD"" or "xfold"). See an example below.
 
 ```{r}
-plot(r, BMDtype = "zSD", plottype = "ecdf") 
+plot(r, BMDtype = "zSD", plottype = "ecdf") + theme_bw() 
 ```
 
 Different alternative plots are proposed (see ?bmdcalc for details)
 that can be obtained using the argument plottype to choose the type of plot 
 ("ecdf", "hist" or "density") and the argument by to split the
-plot for example by "trend". 
+plot for example by "trend". You can also use the bmdplot() function
+to make an ECDF plot of BMDs and personalize it (see ?bmdplot for details).
 
 <!-- Below is an example -->
 <!-- of a density plot of BMD-zSD split by trend of dose-response -->
@@ -774,8 +813,8 @@ and an example below).
 It is generally necessary to use the argument line.size to manually
 adjust the width of lines in that plot as the default value does not always give
 a satisfactory resut. It is also recommended (but not mandatory
-and it is not the default option for this argument) to scale the signal
-as below using the argument `scaling` if you want to focus on the 
+but it is the default option for the argument `scaling`) to scale the signal
+in order to focus on the 
 shape of the dose-reponse curves and not on the amplitude of the signal change.
 
 ```{r}
@@ -783,8 +822,27 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
                     facetby = "trend", 
                     shapeby = "model",
                     line.size = 1.2,
-                    scaling = TRUE) + labs(shape = "model")
+                    scaling = TRUE) 
 ```
+
+<!-- LA SUITE NE FONCTIONNE PAS !!!!!!!!!!!!!!!!!! -->
+<!-- The use of the package plotly to make such a plot interactive can be interesting -->
+<!-- for example to get the identifiant corresponding to each BMD,  -->
+<!-- or to choose what group to -->
+<!-- eliminate or to focus on (you can try on the interactive version of the previous figure below). -->
+
+
+<!-- ```{r} -->
+<!-- g <- bmdplotwithgradient(r$res, BMDtype = "zSD", -->
+<!--                     facetby = "trend",  -->
+<!--                     shapeby = "model", -->
+<!--                     line.size = 1.2, -->
+<!--                     scaling = TRUE)  -->
+<!-- if (require(plotly)) -->
+<!-- { -->
+<!--   ggplotly(g) -->
+<!-- } -->
+<!-- ``` -->
 
 
 ### Calculation of confidence intervals on the BMDs by bootstrap {#bootstrap}
@@ -816,10 +874,50 @@ gives an ECDF plot of the chosen BMD with the confidence interval
 of each BMD (see ?bmdcalc for examples). By default BMDs with an infinite 
 confidence interval bound are not plotted.
 
+### Filtering BMDs according to estimation quality {#bmdfilter}
 
-<!-- ```{r} -->
-<!-- plot(b, BMDtype = "zSD", by = "trend")  -->
-<!-- ``` -->
+Using the bmdfilter() function, it is possible to use one of the 
+three filters proposed to retain
+only the items associated to the best estimated BMD values.
+
++ By default are retained only the items for which the BMD and its
+confidence interval are defined (using `"CIdefined"`) 
+(so excluding items for which the bootstrap procedure failed).
++ One can be even more restrictive by 
+retaining items only if the BMD confidence interval is within the range of
+tested/observed doses (using `"CIfinite"`), 
++ or less restrictive 
+(using `"BMDdefined"`) requiring that the BMD
+point estimate only must be defined within the range of tested/observed doses.
+
+Let us recall that in the `bmdcalc()` output, 
+if it is not the case the BMD is coded `NA` or `NaN`.
+
+Below is an example of application of the different filters based on BMD-xfold values, 
+chosen just to better illustrate the way filters work, as there far more bad BMD-xfold estimations
+than bad BMD-zSD estimations.
+
+```{r, fig.height = 3}
+# Plot of BMDs with no filtering
+subres <- bmdfilter(b$res, BMDfilter = "none")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with defined BMD point estimate
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "definedBMD")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with defined BMD point estimate and CI bounds
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "definedCI")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with finite BMD point estimate and CI bounds
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "finiteCI") 
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+```
 
 ### Plot of fitted curves with BMD values and confidence intervals
 
@@ -840,9 +938,46 @@ plot(f, BMDoutput = b)
 All the fitted curves may also be
 saved in the same way in a pdf file using the plotfit2pdf() function (see ?drcfit).
 
+### Plot of all the fitted curves in one figure with points at BMD-BMR values
+
+It is possible to use the curvesplot() function to plot all the fitted curves in one 
+figure and to add The use of the curvesplot() function is more extensively described in the 
+next parts and in the corresponding help page. By default in this plot the curves are scaled
+to focus on the shape of the dose-response and not on their amplitude (add `scaling = FALSE`
+to see the curves without scaling).
+
+In the following plot we also added vertical lines 
+corresponding to tested doses on the plot and add transparency to visualize the density of curves
+when shapes are similar (especially the case for linear shapes).
+
+```{r}
+tested.doses <- unique(f$omicdata$dose)
+g <- curvesplot(r$res, addBMD = TRUE, xmax = max(tested.doses), colorby = "trend",
+           line.size = 0.8, line.alpha = 0.3, point.size = 2, point.alpha = 0.6) +
+  geom_vline(xintercept = tested.doses, linetype = 2) + theme_bw()
+print(g)
+```
+
+The use of the package plotly to make such a plot interactive can be interesting
+for example to get the identifiant of each curve or to choose what group of curves to
+eliminate or to focus on. You can try the following code to get
+an interactive version of the previous figure.
+
+
+```{r, eval = FALSE}
+if (require(plotly))
+{
+  ggplotly(g)
+}
+
+```
+
+
 ### Description of the outputs of the complete DRomics workflow {#outputs}
 
-The **output of the complete DRomics workflow**, given in `b$res` with `b` being the output of bmdboot()
+The **output of the complete DRomics workflow**, given in `b$res` with `b` being the output of bmdboot(),
+or the output of `bmdfilter(b$res)` (see [previous section](#bmdfilter) for description of 
+BMD filtering options)
 is a **data frame** reporting the **results of the fit and BMD computation on each selected item** sorted in the ascending order of the adjusted p-values 
 returned by the item selection step. 
 
@@ -975,7 +1110,7 @@ Confidence intervals can be added on this plot and color coding for trend in thi
 ```{r}
 bmdplot(extendedres, BMDtype = "zSD", add.CI = TRUE, 
                     facetby = "path_class", 
-                    colorby = "trend") + labs(col = "trend")
+                    colorby = "trend") + theme_bw()
 ```
 
 The function ecdfplotwithCI() can also be used as an alternative as below to provide the same plot
@@ -995,7 +1130,7 @@ Using the function bmdplotwithgradient() and its argument `facetby`, the BMD plo
 bmdplotwithgradient(extendedres, BMDtype = "zSD",
                     scaling = TRUE, 
                     facetby = "path_class", 
-                    shapeby = "trend") + labs(shape = "trend")
+                    shapeby = "trend") 
 ```
 
 One can **focus on a group of interest**, for instance the group "Lipid metabolism", and add the **labels of items**
@@ -1033,8 +1168,33 @@ As an example, below is an ECDF plot of 25th quantiles of BMD-zSD calculated her
 
 ```{r}
 sensitivityplot(extendedres, BMDtype = "zSD",
-                    group = "path_class",
-                 BMDsummary = "first.quartile") 
+                group = "path_class",
+                BMDsummary = "first.quartile") + theme_bw()
+```
+
+It is possible to use medians of BMD values represent and order the groups
+in a sensitivity plot and optionally to add the interquartile range as a line on the plot, as below:
+
+```{r}
+sensitivityplot(extendedres, BMDtype = "zSD",
+                group = "path_class",
+                BMDsummary = "median.and.IQR") + theme_bw()
+```
+
+
+You can customize the sensitivity plot and position the pathway class labels next 
+to the point instead of on the y-axis, using ggplot2 functions.
+
+```{r}
+psens <- sensitivityplot(extendedres, BMDtype = "zSD",
+                         group = "path_class",
+                         BMDsummary = "first.quartile")
+
+psens + 
+  theme_bw() +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  geom_text(aes(label = paste("   ", psens$data$groupby, "   ")), 
+            size = 3, hjust = "inward")
 ```
 
 #### Trend plot per biological group {#trendplot}
@@ -1043,30 +1203,33 @@ It is possible to represent the **repartition of trends in each biological group
 using the trendplot() function (see ?trendplot for details).
 
 ```{r}
-trendplot(extendedres, group = "path_class") 
+trendplot(extendedres, group = "path_class") + theme_bw()
 ```
 
 #### Plot of dose-response curves per biological group {#curvesplot}
 
 The function curvesplot() can show the dose-response curves obtained for different groups
-(or one chosen group). As for the use of bmdplotwithgradient(), the **scaling of those curves can be used as soon as you want to focus on the shape of them, and not on the amplitude of the signal change**. To use this function you have to define the dose range on which you want the computation of the dose-response fitted curves, and **we strongly recommend you to choose a range corresponding to the range of tested/observed doses**
-in your dataset. Below is a code to plot the dose-response curves split by biological group (argument facetby) and colored by trend (argument colorby). (See ?curvesplot for more options).
+(or one chosen group). As for the use of bmdplotwithgradient(), the **scaling of those curves can be used is by default used to focus on the shape of them, and not on the amplitude of the signal change**. To use this function you have to define the dose range on which you want the computation of the dose-response fitted curves, and **we strongly recommend you to choose a range corresponding to the range of tested/observed doses**
+in your dataset. Below is a code to plot the dose-response curves split by biological group (argument facetby) and colored by trend (argument colorby). As below it is also possible
+to add a point at BMD-BMR values on each curve (See ?curvesplot for more options).
 
 ```{r}
 # Plot of all the scaled dose-reponse curves split by path class
-curvesplot(extendedres, facetby = "path_class", scaling = TRUE, npoints = 100, line.size = 1,
-           colorby = "trend", xmin = 0, xmax = 6.5) + labs(col = "trend")
+curvesplot(extendedres, facetby = "path_class", scaling = TRUE, npoints = 100, 
+           colorby = "trend", xmin = 0, xmax = 6.5, 
+           addBMD = TRUE) + theme_bw()
 ```
 
-It is also possible using this function to visualize the modeled respons of each item of
+It is also possible using this function to visualize the modeled response of each item of
 one biological group, as below:
 
 ```{r}
 # Plot of the unscaled dose-reponses for one chosen group, split by metabolite
 LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
-curvesplot(LMres, facetby = "id", npoints = 100, line.size = 1,
+curvesplot(LMres, facetby = "id", npoints = 100, 
+           point.size = 1.5, line.size = 1,
            colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "trend")
+           xmin = 0, xmax = 6.5) + theme_bw() 
 ```
 
 
@@ -1160,15 +1323,13 @@ prop.table() to the table of frequencies `t.pathways`.
 <!-- par(original.par) -->
 <!-- ``` -->
 
-Here the ggplot2 grammar is used to plot the ECDF of BMD_zSD using different colors for the different molecular levels.
+Here the ggplot2 grammar is used to plot the ECDF of BMD_zSD using different colors for the different molecular levels, after removing the redundant lines corresponding to items corresponding to more
+than one pathway.
 
 ```{r}
-if (require(ggplot2))
-{
-   ggplot(extendedres, aes(x = BMD.zSD, color = explevel)) +
-      stat_ecdf(geom = "step") + ylab("ECDF")
-   
-}
+unique.items <- unique(extendedres$id)
+ggplot(extendedres[match(unique.items, extendedres$id), ], aes(x = BMD.zSD, color = explevel)) +
+      stat_ecdf(geom = "step") + ylab("ECDF") + theme_bw()
 ```
 
 
@@ -1197,14 +1358,16 @@ by group (here by KEGG pathway class) as below.
 as in [the previous section presenting bmdplot()](#bmdplot)).
 
 ```{r}
-# BMD ECDF plot split by molecular level
-bmdplot(extendedres, BMDtype = "zSD", 
-                    facetby = "explevel") 
+# BMD ECDF plot split by molecular level, after removing items redundancy
+bmdplot(extendedres[match(unique.items, extendedres$id), ], BMDtype = "zSD", 
+                    facetby = "explevel", point.alpha = 0.4) + theme_bw()
 
 # BMD ECDF plot colored by molecular level and split by path class
 bmdplot(extendedres, BMDtype = "zSD", 
                     facetby = "path_class", 
-                    colorby = "explevel") + labs(col = "molecular level")
+                    colorby = "explevel",
+                    point.alpha = 0.4) + 
+              labs(col = "molecular level") + theme_bw()
 ```
 
 <!-- Below is a focus on few pathways with split on pathway and molecular level. -->
@@ -1229,7 +1392,8 @@ extendedres$path_class <- factor(extendedres$path_class,
                 levels = sort(levels(extendedres$path_class), decreasing = TRUE))
 
 # Trend plot
-trendplot(extendedres, group = "path_class", facetby = "explevel") 
+trendplot(extendedres, group = "path_class", facetby = "explevel") +
+  theme_bw()
 ```
 
 #### Sensitivity plot per group and experimental level
@@ -1242,7 +1406,7 @@ of items in each group as in the example, where the 25th quartiles of BMD values
 ```{r}
 sensitivityplot(extendedres, BMDtype = "zSD",
                 group = "path_class", colorby = "explevel",
-                BMDsummary = "first.quartile") 
+                BMDsummary = "first.quartile") + theme_bw()
 ```
 
 
@@ -1276,7 +1440,7 @@ selectedres <- selectgroups(extendedres,
 # BMDplot on this selection
 bmdplot(selectedres, BMDtype = "zSD", add.CI = TRUE,
                     facetby = "path_class", facetby2 = "explevel",
-                    colorby = "trend") + labs(col = "trend")
+                    colorby = "trend") + theme_bw()
 ```
 
 
@@ -1314,25 +1478,26 @@ experimental level using the argument `facetby2` . (See ?curvesplot for more opt
 
 ```{r}
 # Plot of the unscaled dose-response curves for the "lipid metabolism" path class
+# using transparency to get an idea of density of curves with the shame shape
 LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
-curvesplot(LMres, facetby = "explevel", free.y.scales = TRUE, npoints = 100, line.size = 1,
-           colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "DR_trend")
+curvesplot(LMres, facetby = "explevel", free.y.scales = TRUE, npoints = 100, 
+           addBMD = TRUE, line.alpha = 0.4, line.size = 1, colorby = "trend",
+           xmin = 0, xmax = 6.5) + labs(col = "DR trend") + theme_bw()
 
 # Plot of the scaled dose-response curves for previously chosen path classes
 curvesplot(selectedres2, scaling = TRUE,
            facetby = "path_class", facetby2 = "explevel",
-           npoints = 100, line.size = 1,
+           addBMD = TRUE, npoints = 100, line.size = 1, line.alpha = 0.4,
            colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "DR_trend")
+           xmin = 0, xmax = 6.5) + labs(col = "DR trend") + theme_bw()
 ```
 
-The scaling of the curves only used 
+The scaling of the curves only used here
 in the second plot can be interesting to focus on the 
 shapes of those curves, skipping the amplitude of the changes from the control.
 This helps to evaluate the homogeneity of the shapes of the responses within each group.
 It may for example interesting to observe in this example, that some transcriptomics responses (contigs)
-are gathering the same shape (when we use the scaling option) just differing by their sign (increasing / decreasing, or U-shape/bell-shape), which does not clearly appear when
+are gathering the same shape (when we use the scaling option - it is done by default) just differing by their sign (increasing / decreasing, or U-shape/bell-shape), which does not clearly appear when
 dose-response curves are not scaled (as in the first plot).
 
 
@@ -1341,6 +1506,8 @@ dose-response curves are not scaled (as in the first plot).
 
 + Burnham, KP, Anderson DR (2004). Multimodel inference: understanding AIC and BIC in model selection. Sociological methods & research, 33(2), 261-304.
 
++ Delignette-Muller ML, Siberchicot A, Larras F, Billoir E (2023). DRomics, a workflow to exploit dose-response omics data in ecotoxicology. Peer Community Journal. doi : 10.24072/pcjournal.325. https://peercommunityjournal.org/articles/10.24072/pcjournal.325/
+
 + EFSA Scientific Committee, Hardy A, Benford D, Halldorsson T, Jeger MJ, Knutsen KH, ...
 & Schlatter JR  (2017). Update: use of the benchmark dose approach in risk assessment.
 EFSA Journal, 15(1), e04658.[https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2017.4658](https://efsa.onlinelibrary.wiley.com/doi/full/10.2903/j.efsa.2017.4658)
@@ -1348,7 +1515,6 @@ EFSA Journal, 15(1), e04658.[https://efsa.onlinelibrary.wiley.com/doi/full/10.29
 + Hurvich, CM, Tsai, CL (1989). Regression and time series model selection in small samples. Biometrika, 76(2), 297-307.[https://www.stat.berkeley.edu/~binyu/summer08/Hurvich.AICc.pdf](https://www.stat.berkeley.edu/~binyu/summer08/Hurvich.AICc.pdf)
 
 + Larras F, Billoir E, Baillard V, Siberchicot A, Scholz S, Wubet T, Tarkka M, Schmitt-Jansen M and Delignette-Muller ML (2018). DRomics : a turnkey tool to support the use of the dose-response framework for omics data in ecological risk assessment. Environmental Science & Technology. [https://pubs.acs.org/doi/10.1021/acs.est.8b04752](https://pubs.acs.org/doi/10.1021/acs.est.8b04752).
-You can also find this article at : [https://hal.archives-ouvertes.fr/hal-02309919](https://hal.archives-ouvertes.fr/hal-02309919)
+You can also find this article at : [https://hal.science/hal-02309919](https://hal.science/hal-02309919)
 
 + Larras F, Billoir E, Scholz S, Tarkka M, Wubet T, Delignette-Muller ML, Schmitt-Jansen M (2020). A multi-omics concentration-response framework uncovers novel understanding of triclosan effects in the chlorophyte Scenedesmus vacuolatus. Journal of Hazardous Materials. [https://doi.org/10.1016/j.jhazmat.2020.122727](https://doi.org/10.1016/j.jhazmat.2020.122727).
-

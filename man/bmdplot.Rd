@@ -12,18 +12,22 @@ bmdplot(extendedres, BMDtype = c("zSD", "xfold"),
                                   add.CI = FALSE, 
                                    facetby, facetby2, 
                                    shapeby,  colorby,
-                                   point.size = 1,
+                                   point.size = 1.5,
+                                   point.alpha = 0.8,
+                                   line.size = 0.5, 
+                                   line.alpha = 0.8,
                                    ncol4faceting, 
                                    add.label = FALSE, label.size = 2,
-                                    BMD_log_transfo = FALSE)
+                                    BMD_log_transfo = TRUE)
 }
 
 \arguments{
-\item{extendedres}{the dataframe of results provided by bmdcalc (\code{res}) 
+\item{extendedres}{the dataframe of results provided by 
+\code{\link{plot.bmdcalc}} or \code{\link{plot.bmdboot}} (\code{res}) 
  or a subset of this data frame (selected lines). This dataframe can be extended 
  with additional columns coming for example from the functional annotation of items, and some lines 
  can be replicated if their corresponding item has more than one annotation. 
- This extended dataframe
+ This dataframe
  must at least contain the column giving the BMD values (\code{BMD.zSD} or \code{BMD.xfold}
  depending of chosen BMDtype), identification of each curve (\code{id}),
  and if \code{add.CI} is TRUE,
@@ -50,6 +54,12 @@ bmdplot(extendedres, BMDtype = c("zSD", "xfold"),
   
 \item{point.size}{Size of the BMD points.}
 
+\item{point.alpha}{Transparency of the points.}
+
+\item{line.size}{Width of the lines.}
+
+\item{line.alpha}{Transparency of the lines.}
+
 \item{ncol4faceting}{Number of columns for facetting (not used if \code{facetby2} 
   is also provided.}
 
@@ -57,8 +67,7 @@ bmdplot(extendedres, BMDtype = c("zSD", "xfold"),
 
 \item{label.size}{Size of labels if add.label is TRUE.}
 
-\item{BMD_log_transfo}{If TRUE a log transformation of the BMD is used in the plot. 
-  This option cannot be used with a null value of xmin in input.}
+\item{BMD_log_transfo}{If TRUE, default option, a log transformation of the BMD is used in the plot.}
 
 
 }
@@ -114,50 +123,50 @@ str(annot)
 
 # Merging of both previous dataframes
 # in order to obtain an extenderes dataframe
-extendedres <- merge(x = res, y = annot, by.x = "id", by.y = "metab.code")
-head(extendedres)
+metabextendedres <- merge(x = res, y = annot, by.x = "id", by.y = "metab.code")
+head(metabextendedres)
 
 
 ### (1.a) BMDplot by pathway shaped by trend
-bmdplot(extendedres, BMDtype = "zSD",
+bmdplot(metabextendedres, BMDtype = "zSD",
                      facetby = "path_class", 
                        shapeby = "trend") 
 
 \donttest{
 
 ### (1.b) BMDplot by pathway with items labels
-bmdplot(extendedres, BMDtype = "zSD",
+bmdplot(metabextendedres, BMDtype = "zSD",
                      facetby = "path_class", 
                        add.label = TRUE,
-                       label.size = 1.5) 
+                       label.size = 2) 
 
 ### (1.c) BMDplot by pathway with confidence intervals
-bmdplot(extendedres, BMDtype = "zSD",
+bmdplot(metabextendedres, BMDtype = "zSD",
                      facetby = "path_class", 
                        add.CI = TRUE) 
 
 ### (1.d) BMDplot by pathway with confidence intervals 
-#         in BMD log scale
-bmdplot(extendedres, BMDtype = "zSD",
+#         in BMD raw scale (not default log scale)
+bmdplot(metabextendedres, BMDtype = "zSD",
                      facetby = "path_class",
                      add.CI = TRUE,
-                     BMD_log_transfo = TRUE) 
+                     BMD_log_transfo = FALSE) 
 
 ### (1.e) BMDplot by pathway with confidence intervals 
-#         colored by trend
-bmdplot(extendedres, BMDtype = "zSD",
+#         colored by trend and playing with graphical parameters
+bmdplot(metabextendedres, BMDtype = "zSD",
                      facetby = "path_class",
                      add.CI = TRUE,
-                     colorby = "trend",
-                     BMD_log_transfo = TRUE) 
+                     colorby = "trend", 
+                     point.size = 2,
+                     point.alpha = 0.5,
+                     line.size = 0.8,
+                     line.alpha = 0.5) 
 
 
 # (2) 
 # An example with two molecular levels
 #
-### Rename metabolomic results
-metabextendedres <- extendedres
-
 # Import the dataframe with transcriptomic results 
 contigresfilename <- system.file("extdata", "triclosanSVcontigres.txt", package = "DRomics")
 contigres <- read.table(contigresfilename, header = TRUE, stringsAsFactors = TRUE)
@@ -183,7 +192,8 @@ str(extendedres)
 ### BMD plot per pathway with molecular level coding for color
 bmdplot(extendedres, BMDtype = "zSD",
                      facetby = "path_class",
-                     colorby = "molecular.level") 
+                     colorby = "molecular.level",
+                     point.alpha = 0.3) 
 
 ### BMD plot per pathway and per molecular level 
 # for a selection of pathways

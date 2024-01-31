@@ -1,12 +1,15 @@
 # Plot of fitted curves using columns of on extended dataframe to optionnally code 
 # for color and or facet 
 curvesplot <- function(extendedres, xmin = 0, xmax, 
-                       y0shift = TRUE, scaling = FALSE,
+                       y0shift = TRUE, scaling = TRUE,
                        facetby, facetby2, free.y.scales = FALSE, 
                        ncol4faceting, colorby, removelegend = FALSE,  
-                        npoints = 500, line.size = 0.2, line.alpha = 1,
-                       dose_log_transfo = FALSE)
+                        npoints = 500, line.size = 0.5, line.alpha = 0.8,
+                       dose_log_transfo = FALSE,
+                       addBMD = TRUE, BMDtype = c("zSD", "xfold"), 
+                       point.size = 1, point.alpha = 0.8)
 {
+  BMDtype <- match.arg(BMDtype, c("zSD", "xfold"))
   if (missing(extendedres) | !is.data.frame(extendedres))
     stop("The first argument of curvesplot must be a dataframe 
     (see ?curvesplot for details).")
@@ -138,15 +141,15 @@ curvesplot <- function(extendedres, xmin = 0, xmax,
   # no color no facet
   if (missing(colorby) & missing(facetby))
   {
-    gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id))) +
-      geom_line(size = line.size, alpha = line.alpha) 
+    gg <- ggplot(data = curves2plot, mapping = aes(x = .data$x, y = .data$y, group = .data$id)) +
+      geom_line(linewidth = line.size, alpha = line.alpha) 
   } else
     # facet only
     if (missing(colorby))
     { 
       curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
-      gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id))) +
-        geom_line(size = line.size, alpha = line.alpha) 
+      gg <- ggplot(data = curves2plot, mapping = aes(x = .data$x, y = .data$y, group = .data$id)) +
+        geom_line(linewidth = line.size, alpha = line.alpha) 
       # + 
       #   facet_wrap(~ facetby, scales = scales.arg) 
     } else
@@ -154,23 +157,22 @@ curvesplot <- function(extendedres, xmin = 0, xmax,
       if (missing(facetby))
       {
         curves2plot$colorby <- rep(extendedres[, colorby], each = npoints)
-        gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id), colour = quote(colorby))) +
-          geom_line(size = line.size, alpha = line.alpha)  
+        gg <- ggplot(data = curves2plot, mapping = aes(x = .data$x, y = .data$y, group = .data$id, colour = .data$colorby)) +
+          geom_line(linewidth = line.size, alpha = line.alpha)  
       } else
         # color and facet
       {
         curves2plot$facetby <- rep(extendedres[, facetby], each = npoints)
         curves2plot$colorby <- rep(extendedres[, colorby], each = npoints)
-        gg <- ggplot(data = curves2plot, mapping = aes_(x = quote(x), y = quote(y), group = quote(id), colour = quote(colorby))) +
-          geom_line(size = line.size, alpha = line.alpha)   
+        gg <- ggplot(data = curves2plot, mapping = aes(x = .data$x, y = .data$y, group = .data$id, colour = .data$colorby)) +
+          geom_line(linewidth = line.size, alpha = line.alpha)   
       }
   if (!missing(facetby))
   {
     if (!missing(facetby2)) 
     {
       gg <- gg + facet_grid(facetby2 ~ facetby, scales = scales.arg) 
-    }
-    else
+    } else
     {
       if (missing(ncol4faceting))
       {
@@ -187,6 +189,67 @@ curvesplot <- function(extendedres, xmin = 0, xmax,
   
   if (dose_log_transfo)
     gg <- gg + scale_x_log10()
+
+  if (scaling)
+  {
+    gg <- gg + ylab("scaled signal") + xlab("dose")
+  } else
+  {
+    gg <- gg + ylab("signal") + xlab("dose")
+  }
+
+  if (!missing(colorby))
+  {
+    gg <- gg + labs(color = colorby)
+  }
   
+  if (addBMD)
+  {
+    if (BMDtype == "zSD")
+    {  
+      if (any(!is.element(c("BMD.zSD", "BMR.zSD"), cnames)))
+      {
+        stop("To add BMD-zSD values on the curves, the first argument of curvesplot must be a dataframe
+      containing the columns BMD.zSD and BMR.zSD.")
+      }
+      BMD2plot <- data.frame(x = extendedres$BMD.zSD, y = extendedres$BMR.zSD, id = extendedres$id)
+    } else 
+    {
+      if (any(!is.element(c("BMD.xfold", "BMR.xfold"), cnames)))
+      {
+        stop("To add BMD-xfold values on the curves, the first argument of curvesplot must be a dataframe
+      containing the columns BMD.xfold and BMR.xfold.")
+      }
+      BMD2plot <- data.frame(x = extendedres$BMD.xfold, y = extendedres$BMR.xfold, id = extendedres$id)
+    }
+    
+    if (y0shift) 
+    {
+      if (scaling) 
+      {
+        BMD2plot$y <- (BMD2plot$y - extendedres$y0) / extendedres$maxychange
+      } else
+      {
+        BMD2plot$y <- (BMD2plot$y - extendedres$y0) 
+      }
+    }
+    
+    
+    if (!missing(colorby))
+    {
+      BMD2plot$colorby <- extendedres[, colorby]
+    }
+    if (!missing(facetby)) 
+    {
+      BMD2plot$facetby <- extendedres[, facetby]
+      if (!missing(facetby2)) 
+      {
+        BMD2plot$facetby2 <- extendedres[, facetby2]
+      }
+    }
+    gg <- gg + geom_point(data = BMD2plot, size = point.size, alpha = point.alpha)
+  }
+        
+
   return(gg)
 }

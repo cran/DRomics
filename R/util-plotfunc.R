@@ -2,16 +2,17 @@
 # uses ggplot2
 plotfitsubset <- function(subd, dose, data, data.mean, npts = 50, 
                         plot.type = c("dose_fitted", "dose_residuals","fitted_residuals"),
-                        dose_log_transfo = FALSE, nr = NULL, nc = NULL)
+                        dose_log_transfo = TRUE, nr = NULL, nc = NULL)
 {
   plot.type <- match.arg(plot.type, c("dose_fitted", "dose_residuals", "fitted_residuals"))
   
-  if ((dose_log_transfo) & (plot.type == "fitted_residuals"))
-  {
-    warning(strwrap(prefix = "\n", initial = "\n", 
-      "The log transformation of the dose axis cannot be used for 
-      this type of plot: residuals as fonction of fitted values."))
-  }
+  # removed because unnecessary and now dose_log_transfo by default at TRUE
+  # if ((dose_log_transfo) & (plot.type == "fitted_residuals"))
+  # {
+  #   warning(strwrap(prefix = "\n", initial = "\n", 
+  #     "The log transformation of the dose axis cannot be used for 
+  #     this type of plot: residuals as fonction of fitted values."))
+  # }
   
   lev <- if((!is.null(nr) & !is.null(nc)) && (length(subd$id) < (nr * nc))) {c(subd$id, strrep(" ", 1:(nr * nc - length(subd$id))))} else {subd$id}
   
@@ -80,7 +81,7 @@ plotfitsubset <- function(subd, dose, data, data.mean, npts = 50,
     dataobs$id <- factor(dataobs$id, levels = lev)
     dataobsmean$id <- factor(dataobsmean$id, levels = lev)
     
-    g <- ggplot(dataobs, aes_(x = quote(dose), y = quote(signal))) + geom_point(shape = 1) +
+    g <- ggplot(dataobs, aes(x = .data$dose, y = .data$signal)) + geom_point(shape = 1) +
       facet_wrap(~ id, scales = "free_y", nrow = nr, ncol = nc, drop = FALSE) +
       geom_point(data = dataobsmean, shape = 19)
     
@@ -125,9 +126,9 @@ plotfitsubset <- function(subd, dose, data, data.mean, npts = 50,
     dataresiduals$id <- factor(dataresiduals$id, levels = lev)
     if (plot.type == "dose_residuals")
     {
-      g <- ggplot(dataresiduals, aes_(x = quote(dose), y = quote(residuals))) + 
+      g <- ggplot(dataresiduals, aes(x = .data$dose, y = .data$residuals)) + 
         geom_point(shape = 1) +
-        facet_wrap(~ id, nrow = nr, ncol = nc, drop = FALSE) +
+        facet_wrap(~ id, scales = "free_y", nrow = nr, ncol = nc, drop = FALSE) +
         geom_hline(yintercept = 0, linetype = "dashed", color = "red")
       if (dose_log_transfo)
       {
@@ -138,9 +139,9 @@ plotfitsubset <- function(subd, dose, data, data.mean, npts = 50,
     } else
     if (plot.type == "fitted_residuals")
     {
-      g <- ggplot(dataresiduals, aes_(x = quote(fitted_values), y = quote(residuals))) + 
+      g <- ggplot(dataresiduals, aes(x = .data$fitted_values, y = .data$residuals)) + 
         geom_point(shape = 1) +
-        facet_wrap(~ id, scales = "free_x", nrow = nr, ncol = nc, drop = FALSE) +
+        facet_wrap(~ id, scales = "free", nrow = nr, ncol = nc, drop = FALSE) +
         geom_hline(yintercept = 0, linetype = "dashed", color = "red")
       
     }

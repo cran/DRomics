@@ -17,7 +17,7 @@ invlin <- function(y, b, d)
 }
 
 ### Expo model and starting values
-formExp3p <- as.formula(signal ~ d + b * (exp(dose/e)  - 1) )
+formExp3p <- stats::as.formula(signal ~ d + b * (exp(dose/e)  - 1) )
 startvalExp3pnls.1 <- function(xm, ym, increase, Ushape)
   # inputs
   # - xm unique values of the dose (sorted by dose)
@@ -41,8 +41,8 @@ startvalExp3pnls.1 <- function(xm, ym, increase, Ushape)
     # initial value of e that corresponds to its value in the 2 parameter model
     e <- eabs
     # initial value of b 
-    reg <- lm(ym ~ exp(xm / e))
-    b <- coef(reg)[2]
+    reg <- stats::lm(ym ~ exp(xm / e))
+    b <- stats::coef(reg)[2]
   }
   startval <- list(b = b, d = d, e = e)
 }
@@ -70,8 +70,8 @@ startvalExp3pnls.2 <- function(xm, ym, increase, Ushape)
     # initial value of e that corresponds to its value in the 2 parameter model
     e <- eabs
     # initial value of b 
-    reg <- lm(ym ~ exp(xm / e)) 
-    b <- coef(reg)[2]
+    reg <- stats::lm(ym ~ exp(xm / e)) 
+    b <- stats::coef(reg)[2]
   }
   startval <- list(b = b, d = d, e = e)
 }
@@ -93,12 +93,11 @@ fExpo <- function(x, b, d, e)
 invExpo <- function(y, b, d, e)
 {
   if ( ((e < 0) & (b < 0) & (y > d - b)) | ((e < 0) & (b > 0) & (y < d - b)) )
-    return(NaN) else
-      return(e * log(1 + (y - d) / b))
+    {return(NaN)} else {return(e * log(1 + (y - d) / b))}
 }
 
 ### Hill model and starting values
-formHill <- as.formula(signal ~ c + (d - c) / (1 + (dose/e)^b ) )
+formHill <- stats::as.formula(signal ~ c + (d - c) / (1 + (dose/e)^b ) )
 startvalHillnls2 <- function(x, y, xm, ym, increase) # requires the definition of increase from min and max values
   # inputs
   # - x values of the dose
@@ -120,7 +119,7 @@ startvalHillnls2 <- function(x, y, xm, ym, increase) # requires the definition o
   # initial value of e and b from regression
   yreg <- log((d - c) / (y[x!=0] - c) - 1)
   xreg <- log(x[x!=0])
-  reg <- lm(yreg ~ xreg)
+  reg <- stats::lm(yreg ~ xreg)
   b <- reg$coefficients[2]
   e <- reg$coefficients[1] / (-b)
   startval <- list(b = b, c = c, d = d, e = e)
@@ -143,12 +142,12 @@ fHill <- function(x, b, c, d, e)
 invHill <- function(y, b, c, d, e)
 {
   if ( ((d < c) & (y > c)) | ((d > c) & (y < c)) )
-    return(NaN) else
-      return(e * ((d - y) / (y - c))^(1/b))
+    {return(NaN)} else
+      {return(e * ((d - y) / (y - c))^(1/b))}
 }
 
 ### Gaussian model 5 p and starting values
-formGauss5p <- as.formula(signal ~ f * exp(-0.5 * ((dose-e)/b)^2) + d + (c - d) * pnorm((dose-e)/b)) 
+formGauss5p <- stats::as.formula(signal ~ f * exp(-0.5 * ((dose-e)/b)^2) + d + (c - d) * pnorm((dose-e)/b)) 
 startvalGauss5pnls <- function(xm, ym, Ushape)
   # inputs
   # - xm unique values of the dose (sorted by dose)
@@ -167,13 +166,13 @@ startvalGauss5pnls <- function(xm, ym, Ushape)
   # 
   b <- max(xm) / 4
   # initial value of e (dose corresponding to the maximal (or minimal) signal)
-  xextremum <- median(xm[which(ym == yextremum)]) # just in case there is more than one dose at which ym == yextremum
+  xextremum <- stats::median(xm[which(ym == yextremum)]) # just in case there is more than one dose at which ym == yextremum
   e <- min(xextremum - (c - d)*b/(f*sqrt(2*pi)), 1e-6) 
   startval <- list(b = b, c = c, d = d, e = e, f = f)
 }
 
 ## simplified version for cases where Gauss 5p does not converge (c = d)
-formGauss4p <- as.formula(signal ~ f * exp(-0.5 * ((dose-e)/b)^2) + d ) # without c and without probit part
+formGauss4p <- stats::as.formula(signal ~ f * exp(-0.5 * ((dose-e)/b)^2) + d ) # without c and without probit part
 startvalGauss4pnls <- function(xm, ym, Ushape)
   # inputs
   # - xm unique values of the dose (sorted by dose)
@@ -190,13 +189,13 @@ startvalGauss4pnls <- function(xm, ym, Ushape)
   # with 2sd between 0 and e -> b = e /2
   b <- max(xm) / 4
   # initial value of e (dose corresponding to the maximal (or minimal) signal)
-  xextremum <- median(xm[which(ym == yextremum)] )# just in case there is more than one dose with ym = yextremum
+  xextremum <- stats::median(xm[which(ym == yextremum)] )# just in case there is more than one dose with ym = yextremum
   e <- min(xextremum, 1e-6)
   startval <- list(b = b, d = d, e = e, f = f)
 }
 
 ### probit model
-formprobit <- as.formula(signal ~ d + (c - d) * pnorm((dose-e)/b)) 
+formprobit <- stats::as.formula(signal ~ d + (c - d) * pnorm((dose-e)/b)) 
 
 
 
@@ -205,13 +204,13 @@ formprobit <- as.formula(signal ~ d + (c - d) * pnorm((dose-e)/b))
 fGauss5p <- function(x, b, c, d, e, f)
 {
   f * exp(-0.5 * ((x-e)/b)^2) + # gaussian part
-    d + (c - d) * pnorm((x-e)/b) # probit part
+    d + (c - d) * stats::pnorm((x-e)/b) # probit part
 }
 
 fGauss5pBMR <- function(x, b, c, d, e, g, threshold)
 {
   g * exp(-0.5 * ((x-e)/b)^2) + # gaussian part
-    d + (c - d) * pnorm((x-e)/b) - threshold # probit part
+    d + (c - d) * stats::pnorm((x-e)/b) - threshold # probit part
   
 }
 
@@ -219,21 +218,21 @@ fGauss5pBMR_xinlog <- function(xinlog, b, c, d, e, g, threshold)
 {
   x <- exp(xinlog)
   g * exp(-0.5 * ((x-e)/b)^2) + # gaussian part
-    d + (c - d) * pnorm((x-e)/b) - threshold # probit part
+    d + (c - d) * stats::pnorm((x-e)/b) - threshold # probit part
   
 }
 
 fprobit <- function(x, b, c, d, e) 
 {
-  d + (c - d) * pnorm((x - e)/b)
+  d + (c - d) * stats::pnorm((x - e)/b)
 }
 
 ## inverse probit (X for an y value)
 invprobit <- function(y, b, c, d, e)
 {
   if ( ((d < c) & (y > c)) | ((d > c) & (y < c)) )
-    return(NaN) else
-      return(e + b *qnorm((y - d) / (c - d)))
+    {return(NaN)} else
+      {return(e + b *stats::qnorm((y - d) / (c - d)))}
 }
 
 
@@ -242,7 +241,7 @@ fGauss5poutofrange <- function(fit, signalmin, signalmax)
 # function that takes the result of nls as first argument
 # to be used before the choice of the best model
 {
-  par <- coef(fit)
+  par <- stats::coef(fit)
   b.i <- par["b"]
   c.i <- par["c"]
   d.i <- par["d"]
@@ -258,7 +257,7 @@ fGauss4poutofrange <- function(fit, signalmin, signalmax)
   # function that takes the result of nls as first argument
   # to be used before the choice of the best model
 {
-  par <- coef(fit)
+  par <- stats::coef(fit)
   b.i <- par["b"]
   c.i <- par["d"]
   d.i <- par["d"]
@@ -271,7 +270,7 @@ fGauss4poutofrange <- function(fit, signalmin, signalmax)
 
 
 ### Gaussian model 5 p and starting values in log scale
-formLGauss5p <- as.formula(signal ~ f * exp(-0.5 * (log(dose/e)/b)^2) + d + (c - d) * pnorm(log(dose/e)/b)) 
+formLGauss5p <- stats::as.formula(signal ~ f * exp(-0.5 * (log(dose/e)/b)^2) + d + (c - d) * pnorm(log(dose/e)/b)) 
 startvalLGauss5pnls <- function(xm, ym, Ushape)
   # inputs
   # - xm unique values of the dose (sorted by dose)
@@ -289,14 +288,14 @@ startvalLGauss5pnls <- function(xm, ym, Ushape)
   # bell shape extends to the whole dose range so dose max = 4 sd = 4 * b IN LOG SCALE !!!
   b <- (log(max(xm)) - log(min(xm[xm!=0]))) / 4
   # initial value of e (dose corresponding to the maximal (or minimal) signal)
-  xextremum <- median(xm[which(ym == yextremum)]) # median just in case there is more than one dose with ym = yextremum
+  xextremum <- stats::median(xm[which(ym == yextremum)]) # median just in case there is more than one dose with ym = yextremum
   e <- xextremum * exp(- (c - d)*b/(f*sqrt(2*pi))) 
   startval <- list(b = b, c = c, d = d, e = e, f = f)
 }
 
 
 ## simplified version for cases where Gauss 5p dose not converge (c = d)
-formLGauss4p <- as.formula(signal ~ f * exp(-0.5 * (log(dose/e)/b)^2) + d) # without c and without probit part
+formLGauss4p <- stats::as.formula(signal ~ f * exp(-0.5 * (log(dose/e)/b)^2) + d) # without c and without probit part
 startvalLGauss4pnls <- function(xm, ym, Ushape)
   # inputs
   # - xm unique values of the dose (sorted by dose)
@@ -312,14 +311,14 @@ startvalLGauss4pnls <- function(xm, ym, Ushape)
   # bell shape extends to the whole dose range so dose max = 4 sd = 4 * b IN LOG SCALE !!!
   b <- (log(max(xm)) - log(min(xm[xm!=0]))) / 4
   # initial value of e (dose corresponding to the maximal (or minimal) signal)
-  xextremum <- median(xm[which(ym == yextremum)]) # just in case there is more than one dose with ym = yextremum
+  xextremum <- stats::median(xm[which(ym == yextremum)]) # just in case there is more than one dose with ym = yextremum
   e <- xextremum 
   startval <- list(b = b, d = d, e = e, f = f)
 }
 
 
 ### log-probit model - used to simplify the LGP model
-formLprobit <- as.formula(signal ~ d + (c - d) * pnorm(log(dose/e)/b)) 
+formLprobit <- stats::as.formula(signal ~ d + (c - d) * pnorm(log(dose/e)/b)) 
 
 ### log-probit starting values - no more used
 # startvalLprobitnls1 <- function(xm, ym) # to suppress
@@ -376,35 +375,35 @@ formLprobit <- as.formula(signal ~ d + (c - d) * pnorm(log(dose/e)/b))
 fLGauss5p <- function(x, b, c, d, e, f)
 {
   f * exp(-0.5 * (log(x/e)/b)^2) + # gaussian part
-    d + (c - d) * pnorm(log(x/e)/b) # probit part
+    d + (c - d) * stats::pnorm(log(x/e)/b) # probit part
 }
 
 fLGauss5pBMR <- function(x, b, c, d, e, g, threshold)
 {
   g * exp(-0.5 * (log(x/e)/b)^2) + # gaussian part
-    d + (c - d) * pnorm(log(x/e)/b) - threshold # probit part
+    d + (c - d) * stats::pnorm(log(x/e)/b) - threshold # probit part
   
 }
 
 fLGauss5pBMR_xinlog <- function(xinlog, b, c, d, e, g, threshold)
 {
   g * exp(-0.5 * ((xinlog - log(e))/b)^2) + # gaussian part
-    d + (c - d) * pnorm((xinlog - log(e))/b) - threshold # probit part
+    d + (c - d) * stats::pnorm((xinlog - log(e))/b) - threshold # probit part
   
 }
 
 
 fLprobit <- function(x, b, c, d, e)
 {
-  d + (c - d) * pnorm(log(x/e)/b)
+  d + (c - d) * stats::pnorm(log(x/e)/b)
 }
 
 ## inverse Lprobit (X for an y value)
 invLprobit <- function(y, b, c, d, e)
 {
   if ( ((d < c) & (y > c)) | ((d > c) & (y < c)) )
-    return(NaN) else
-      return(e * exp(qnorm((y - d) / (c - d)) *b))
+    {return(NaN)} else
+      {return(e * exp(stats::qnorm((y - d) / (c - d)) *b))}
 }
 
 
@@ -413,7 +412,7 @@ fLGauss5poutofrange <- function(fit, signalmin, signalmax)
   # function that takes the result of nls as first argument
   # to be used before the choice of the best model
 {
-  par <- coef(fit)
+  par <- stats::coef(fit)
   b.i <- par["b"]
   c.i <- par["c"]
   d.i <- par["d"]
@@ -429,7 +428,7 @@ fLGauss4poutofrange <- function(fit, signalmin, signalmax)
   # function that takes the result of nls as first argument
   # to be used before the choice of the best model
 {
-  par <- coef(fit)
+  par <- stats::coef(fit)
   b.i <- par["b"]
   c.i <- par["d"]
   d.i <- par["d"]

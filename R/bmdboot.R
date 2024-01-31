@@ -56,7 +56,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
   
   # progress bar
   if (progressbar)
-    pb <- txtProgressBar(min = 0, max = nitems, style = 3)
+    pb <- utils::txtProgressBar(min = 0, max = nitems, style = 3)
 
   ##### Bootstrap for one item ####################
   bootoneitem <- function(i)
@@ -76,7 +76,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
     datai <- r$omicdata$data[resitem$irow, ]
     dset <- data.frame(signal = datai, dose = dose)
     # removing lines with NA values for the signal
-    dset <- dset[complete.cases(dset$signal), ]
+    dset <- dset[stats::complete.cases(dset$signal), ]
     ndata <- nrow(dset)
 
     ############## Model expo ###########
@@ -93,7 +93,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       {
         if(bootmethod == "param")
         {
-          dsetboot[, 1] <- fitted1 + rnorm(ndata, mean = 0, sd = SDresi)
+          dsetboot[, 1] <- fitted1 + stats::rnorm(ndata, mean = 0, sd = SDresi)
         } else
         {
           dsetboot[, 1] <- fitted1 + sample(scale(resid1, scale = FALSE), replace = TRUE)
@@ -101,22 +101,22 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
         # fit
         if (e1 < 0)
         {
-          nlsboot <- suppressWarnings(try(nls(formula = formExp3p, data = dsetboot, start = lestimpar,
+          nlsboot <- suppressWarnings(try(stats::nls(formula = formExp3p, data = dsetboot, start = lestimpar,
                              lower = c(-Inf, -Inf, -Inf), 
                              upper = c(Inf, Inf, 0), algorithm = "port"), 
                          silent = TRUE))
         } else
         {
-          nlsboot <- suppressWarnings(try(nls(formula = formExp3p, data = dsetboot, start = lestimpar,
+          nlsboot <- suppressWarnings(try(stats::nls(formula = formExp3p, data = dsetboot, start = lestimpar,
                              lower = c(-Inf, -Inf, 0), algorithm = "port"), 
                          silent = TRUE))
         }
         if(inherits(nlsboot, "nls"))
         {
-          SDresboot <- sqrt(sum(residuals(nlsboot)^2)/(ndata - nbpari))
-          bboot <- coef(nlsboot)["b"]
-          dboot <- coef(nlsboot)["d"]
-          eboot <- coef(nlsboot)["e"]
+          SDresboot <- sqrt(sum(stats::residuals(nlsboot)^2)/(ndata - nbpari))
+          bboot <- stats::coef(nlsboot)["b"]
+          dboot <- stats::coef(nlsboot)["d"]
+          eboot <- stats::coef(nlsboot)["e"]
           y0boot <- dboot
           ydosemaxboot <- fExpo(x = dosemax, b = bboot, d = dboot, e = eboot)
           ypboot <- y0boot * ( 1 + xdiv100*sign(eboot * bboot))
@@ -144,22 +144,22 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       {
         if(bootmethod == "param")
         {
-          dsetboot[, 1] <- fitted1 + rnorm(ndata, mean = 0, sd = SDresi)
+          dsetboot[, 1] <- fitted1 + stats::rnorm(ndata, mean = 0, sd = SDresi)
         } else
         {
           dsetboot[, 1] <- fitted1 + sample(scale(resid1, scale = FALSE), replace = TRUE)
         }
         # fit
-        nlsboot <- suppressWarnings(try(nls(formula = formHill, data = dsetboot, start = lestimpar,
+        nlsboot <- suppressWarnings(try(stats::nls(formula = formHill, data = dsetboot, start = lestimpar,
                                              lower = c(0, -Inf, -Inf, 0), algorithm = "port"), 
                                           silent = TRUE))
         if(inherits(nlsboot, "nls"))
         {
-          SDresboot <- sqrt(sum(residuals(nlsboot)^2)/(ndata - nbpari))
-          bboot <- coef(nlsboot)["b"]
-          cboot <- coef(nlsboot)["c"]
-          dboot <- coef(nlsboot)["d"]
-          eboot <- coef(nlsboot)["e"]
+          SDresboot <- sqrt(sum(stats::residuals(nlsboot)^2)/(ndata - nbpari))
+          bboot <- stats::coef(nlsboot)["b"]
+          cboot <- stats::coef(nlsboot)["c"]
+          dboot <- stats::coef(nlsboot)["d"]
+          eboot <- stats::coef(nlsboot)["e"]
           y0boot <- dboot
           ydosemaxboot <- fHill(x = dosemax, b = bboot, c = cboot, d = dboot, e = eboot)
           ypboot <- y0boot * ( 1 + xdiv100*sign(cboot * dboot))
@@ -186,16 +186,16 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       {
         if(bootmethod == "param")
         {
-          dsetboot[, 1] <- fitted1 + rnorm(ndata, mean = 0, sd = SDresi)
+          dsetboot[, 1] <- fitted1 + stats::rnorm(ndata, mean = 0, sd = SDresi)
         } else
         {
           dsetboot[, 1] <- fitted1 + sample(scale(resid1, scale = FALSE), replace = TRUE)
         }
         # fit
-        linboot <- lm(signal ~ dose, data = dsetboot)
-        SDresboot <- sqrt(sum(residuals(linboot)^2)/(ndata - nbpari))
-        bboot <- coef(linboot)[2]
-        dboot <- coef(linboot)[1]
+        linboot <- stats::lm(signal ~ dose, data = dsetboot)
+        SDresboot <- sqrt(sum(stats::residuals(linboot)^2)/(ndata - nbpari))
+        bboot <- stats::coef(linboot)[2]
+        dboot <- stats::coef(linboot)[1]
         y0boot <- dboot
         ydosemaxboot <- flin(x = dosemax, b = bboot, d = dboot)
         ypboot <- y0boot * ( 1 + xdiv100*sign(bboot))
@@ -224,7 +224,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       {
         if(bootmethod == "param")
         {
-          dsetboot[, 1] <- fitted1 + rnorm(ndata, mean = 0, sd = SDresi)
+          dsetboot[, 1] <- fitted1 + stats::rnorm(ndata, mean = 0, sd = SDresi)
         } else
         {
           dsetboot[, 1] <- fitted1 + sample(scale(resid1, scale = FALSE), replace = TRUE)
@@ -232,34 +232,35 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
         # fit
         if (nbpari == 5)
         {
-          nlsboot <- suppressWarnings(try(nls(formula = formGauss5p, data = dsetboot, start = lestimpar,
+          nlsboot <- suppressWarnings(try(stats::nls(formula = formGauss5p, data = dsetboot, start = lestimpar,
                                               lower = c(0, -Inf, -Inf, 0, -Inf), algorithm = "port"), 
                                           silent = TRUE))
-        }
-        else
+        } else
         {
           if (f1 == 0)
           {
             lestimpar.f0 <- list(b = lestimpar$b, c = lestimpar$c, d = lestimpar$d, e = lestimpar$e)
-            nlsboot <- suppressWarnings(try(nls(formula = formprobit, data = dsetboot, start = lestimpar.f0,
+            nlsboot <- suppressWarnings(try(stats::nls(formula = formprobit, data = dsetboot, start = lestimpar.f0,
                                                 lower = c(0, -Inf, -Inf, 0), algorithm = "port"), 
                                             silent = TRUE))
           } else
           {
             lestimpar.4p <- list(b = lestimpar$b, d = lestimpar$d, e = lestimpar$e, f = lestimpar$f)
-            nlsboot <- suppressWarnings(try(nls(formula = formGauss4p, data = dsetboot, start = lestimpar.4p,
+            nlsboot <- suppressWarnings(try(stats::nls(formula = formGauss4p, data = dsetboot, start = lestimpar.4p,
                                                 lower = c(0, -Inf, 0, -Inf), algorithm = "port"), 
                                             silent = TRUE))
           }
         }
-        if(inherits(nlsboot, "nls"))
+        if (inherits(nlsboot, "nls"))
         {
-          SDresboot <- sqrt(sum(residuals(nlsboot)^2)/(ndata - nbpari))
-          bboot <- coef(nlsboot)["b"]
-          if (nbpari == 5) cboot <- coef(nlsboot)["c"] else cboot <- coef(nlsboot)["d"]
-          dboot <- coef(nlsboot)["d"]
-          eboot <- coef(nlsboot)["e"]
-          fboot <- coef(nlsboot)["f"]
+          SDresboot <- sqrt(sum(stats::residuals(nlsboot)^2)/(ndata - nbpari))
+          bboot <- stats::coef(nlsboot)["b"]
+          if (nbpari == 5) 
+            {cboot <- stats::coef(nlsboot)["c"]} else 
+            {cboot <- stats::coef(nlsboot)["d"]}
+          dboot <- stats::coef(nlsboot)["d"]
+          eboot <- stats::coef(nlsboot)["e"]
+          fboot <- stats::coef(nlsboot)["f"]
           y0boot <- fGauss5p(x = 0, b = bboot, c = cboot, d = dboot, e = eboot, f = fboot)
           ydosemaxboot <- fGauss5p(x = dosemax, b = bboot, c = cboot, d = dboot, e = eboot, f = fboot)
             
@@ -271,29 +272,35 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
             deltapboot <- abs(y0boot) * xdiv100
             deltasdboot <- z * SDresboot
             
-            resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
+            resBMDp <- suppressWarnings(try(
+              calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
                                dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
                                func = fGauss5pBMR, func_xinlog = fGauss5pBMR_xinlog,
                                b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
-                               minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
-            BMDpboot <- resBMDp$BMD
-            
-            resBMDsd <- calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
+                               minBMD = minBMD, ratio2switchinlog = ratio2switchinlog),
+              silent = TRUE))
+
+            resBMDsd <- suppressWarnings(try(
+              calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
                                 dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
                                 func = fGauss5pBMR, func_xinlog = fGauss5pBMR_xinlog,
                                 b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
-                                minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
-            BMDsdboot <- resBMDsd$BMD
-          } else
+                                minBMD = minBMD, ratio2switchinlog = ratio2switchinlog),
+              silent = TRUE))
+            # return a value only if no problem with nls AND uniroot
+            if (!inherits(resBMDsd, "try-error") &  !inherits(resBMDp, "try-error"))
+            {
+              return(list(BMDp = resBMDp$BMD, BMDsd = resBMDsd$BMD))
+            } 
+          } else # if f1 == 0
           {
             ypboot <- y0boot * ( 1 + xdiv100*sign(cboot * dboot))
             BMDpboot <- pmax(invprobit(ypboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
             ysdboot <- y0boot + z*SDresboot * sign(cboot * dboot)
             BMDsdboot <- pmax(invprobit(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
+            return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
           }
-          
-          return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
-        }
+         } # end if (inherits(nlsboot, "nls"))
       } # end fboot
     } else
     ############ END model Gauss probit ###################
@@ -314,7 +321,7 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
       {
         if(bootmethod == "param")
         {
-          dsetboot[, 1] <- fitted1 + rnorm(ndata, mean = 0, sd = SDresi)
+          dsetboot[, 1] <- fitted1 + stats::rnorm(ndata, mean = 0, sd = SDresi)
         } else
         {
           dsetboot[, 1] <- fitted1 + sample(scale(resid1, scale = FALSE), replace = TRUE)
@@ -322,34 +329,36 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
         # fit
         if (nbpari == 5)
         {
-          nlsboot <- suppressWarnings(try(nls(formula = formLGauss5p, data = dsetboot, start = lestimpar,
+          nlsboot <- suppressWarnings(try(stats::nls(formula = formLGauss5p, data = dsetboot, start = lestimpar,
                                               lower =  c(0, -Inf, -Inf, 0, -Inf), algorithm = "port"), 
                                           silent = TRUE))
-        }
-        else
+        } else
         {
           if (f1 == 0)
           {
             lestimpar.f0 <- list(b = lestimpar$b, c = lestimpar$c, d = lestimpar$d, e = lestimpar$e)
-            nlsboot <- suppressWarnings(try(nls(formula = formLprobit, data = dsetboot, start = lestimpar.f0,
+            nlsboot <- suppressWarnings(try(stats::nls(formula = formLprobit, data = dsetboot, start = lestimpar.f0,
                                                 lower = c(0, -Inf, -Inf, 0), algorithm = "port"), 
                                             silent = TRUE))
           } else
           {
             lestimpar.4p <- list(b = lestimpar$b, d = lestimpar$d, e = lestimpar$e, f = lestimpar$f)
-            nlsboot <- suppressWarnings(try(nls(formula = formLGauss4p, data = dsetboot, start = lestimpar.4p,
+            nlsboot <- suppressWarnings(try(stats::nls(formula = formLGauss4p, data = dsetboot, start = lestimpar.4p,
                                                 lower = c(0, -Inf, 0, -Inf), algorithm = "port"), 
                                             silent = TRUE))
           }
         }
         if(inherits(nlsboot, "nls"))
         {
-          SDresboot <- sqrt(sum(residuals(nlsboot)^2)/(ndata - nbpari))
-          bboot <- coef(nlsboot)["b"]
-          if (nbpari == 5 | f1 == 0) cboot <- coef(nlsboot)["c"] else cboot <- coef(nlsboot)["d"]
-          dboot <- coef(nlsboot)["d"]
-          eboot <- coef(nlsboot)["e"]
-          if (f1 == 0) fboot <- 0 else fboot <- coef(nlsboot)["f"]
+          SDresboot <- sqrt(sum(stats::residuals(nlsboot)^2)/(ndata - nbpari))
+          bboot <- stats::coef(nlsboot)["b"]
+          if (nbpari == 5 | f1 == 0) 
+            {cboot <- stats::coef(nlsboot)["c"]} else 
+              {cboot <- stats::coef(nlsboot)["d"]}
+          dboot <- stats::coef(nlsboot)["d"]
+          eboot <- stats::coef(nlsboot)["e"]
+          if (f1 == 0) {fboot <- 0} else 
+            {fboot <- stats::coef(nlsboot)["f"]}
           y0boot <- dboot
           ydosemaxboot <- fLGauss5p(x = dosemax, b = bboot, c = cboot, d = dboot, e = eboot, f = fboot)
           
@@ -361,29 +370,36 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
             deltapboot <- abs(y0boot) * xdiv100
             deltasdboot <- z * SDresboot
             
-            resBMDp <- calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
+            resBMDp <- suppressWarnings(try(
+              calcBMD(y0=y0boot, delta=deltapboot, xext=xextrboot, yext=yextrboot, 
                                dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
                                func = fLGauss5pBMR, func_xinlog = fLGauss5pBMR_xinlog,
                                b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
-                               minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
-            BMDpboot <- resBMDp$BMD
-            
-            resBMDsd <- calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
+                               minBMD = minBMD, ratio2switchinlog = ratio2switchinlog),
+              silent = TRUE))
+
+            resBMDsd <- suppressWarnings(try(
+              calcBMD(y0=y0boot, delta=deltasdboot, xext=xextrboot, yext=yextrboot, 
                                 dosemin = dosemin, dosemax = dosemax, ydosemax = ydosemaxboot, 
                                 func = fLGauss5pBMR, func_xinlog = fLGauss5pBMR_xinlog,
                                 b = bboot, c = cboot, d = dboot, e = eboot, g = fboot, 
-                                minBMD = minBMD, ratio2switchinlog = ratio2switchinlog)
-            BMDsdboot <- resBMDsd$BMD
-          } else
+                                minBMD = minBMD, ratio2switchinlog = ratio2switchinlog),
+              silent = TRUE))
+            
+            # return a value only if no problem with nls AND uniroot
+            if (!inherits(resBMDsd, "try-error") &  !inherits(resBMDp, "try-error"))
+            {
+              return(list(BMDp = resBMDp$BMD, BMDsd = resBMDsd$BMD))
+            } 
+          } else # if f1 == 0
           {
             ypboot <- y0boot * ( 1 + xdiv100*sign(cboot * dboot))
             BMDpboot <- pmax(invLprobit(ypboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
             ysdboot <- y0boot + z*SDresboot * sign(cboot * dboot)
             BMDsdboot <- pmax(invLprobit(ysdboot, b= bboot, c = cboot, d = dboot, e = eboot), minBMD)
-          }
-          
-          return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
-        }
+            return(list(BMDp = BMDpboot, BMDsd = BMDsdboot))
+          } # end if f1 == 0
+        } # end if (inherits(nlsboot, "nls"))
       } # end fboot
     }
     ############ END model log Gauss probit ###################
@@ -404,18 +420,18 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
 
       BMDpbooti[is.na(BMDpbooti) | BMDpbooti > dosemax] <- Inf
       BMDsdbooti[is.na(BMDsdbooti) | BMDsdbooti > dosemax] <- Inf
-      BMDp.CI <- quantile(BMDpbooti, probs = c(prob.lower, prob.upper))
+      BMDp.CI <- stats::quantile(BMDpbooti, probs = c(prob.lower, prob.upper))
       BMDplower <- BMDp.CI[1]
       BMDpupper <- BMDp.CI[2]
       
-      BMDsd.CI <- quantile(BMDsdbooti, probs = c(prob.lower, prob.upper))
+      BMDsd.CI <- stats::quantile(BMDsdbooti, probs = c(prob.lower, prob.upper))
       BMDsdlower <- BMDsd.CI[1]
       BMDsdupper <- BMDsd.CI[2]
       
       
       if (progressbar)
       {
-        setTxtProgressBar(pb, i)
+        utils::setTxtProgressBar(pb, i)
       }
       return(c(BMDsdlower, BMDsdupper, BMDplower, BMDpupper, nboot.successful))
     }
@@ -427,13 +443,11 @@ bmdboot <- function(r, items = r$res$id, niter = 1000,
   # parallel or sequential computation
   if (parallel != "no") 
   {
-    if (parallel == "snow") type <- "PSOCK"
-    else if (parallel == "multicore") type <- "FORK"
+    if (parallel == "snow") {type <- "PSOCK"} else if (parallel == "multicore") {type <- "FORK"}
     clus <- parallel::makeCluster(ncpus, type = type)
     res <- parallel::parSapply(clus, 1:nitems, bootoneitem)
     parallel::stopCluster(clus)
-  }
-  else
+  } else
   {
     res <- sapply(1:nitems, bootoneitem)
   }
@@ -478,7 +492,8 @@ print.bmdboot <- function(x, ...)
 }
 
 plot.bmdboot <- function(x, BMDtype = c("zSD", "xfold"), remove.infinite = TRUE,
-                         by = c("none", "trend", "model", "typology"), CI.col = "blue",  ...) 
+                         by = c("none", "trend", "model", "typology"), 
+                         CI.col = "blue", BMD_log_transfo = TRUE, ...) 
 {
   if (!inherits(x, "bmdboot"))
     stop("Use only with 'bmdboot' objects.")
@@ -498,9 +513,13 @@ plot.bmdboot <- function(x, BMDtype = c("zSD", "xfold"), remove.infinite = TRUE,
   }
   nrow(dwithNA)
   
-  if (by == "trend") dwithNA$by <- res$trend else
-    if (by == "model") dwithNA$by <- res$model else
-      if (by == "typology") dwithNA$by <- res$typology 
+  if (by == "trend") {dwithNA$by <- res$trend} else
+  {
+    if (by == "model") {dwithNA$by <- res$model} else
+    {
+      if (by == "typology") {dwithNA$by <- res$typology}
+    }
+  }
   
   # Remove NA values if needed
   d <- dwithNA[!is.na(dwithNA$BMD) & !is.na(dwithNA$BMD.lower) & !is.na(dwithNA$BMD.upper), ]
@@ -563,33 +582,38 @@ plot.bmdboot <- function(x, BMDtype = c("zSD", "xfold"), remove.infinite = TRUE,
     }
     if (!define.xlim)
     {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD), y = quote(ECDF))) + 
+      g <- ggplot(data = d, mapping = aes(x = .data$BMD, y = .data$ECDF)) + 
         facet_wrap(~ by) + 
-        geom_errorbarh(aes_(xmin = quote(BMD.lower), xmax = quote(BMD.upper)), col = CI.col, 
+        geom_errorbarh(aes(xmin = .data$BMD.lower, xmax = .data$BMD.upper), col = CI.col, 
                        alpha = 0.5, height = 0) + geom_point() 
     } else
     {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD), y = quote(ECDF))) + 
+      g <- ggplot(data = d, mapping = aes(x = .data$BMD, y = .data$ECDF)) + 
         facet_wrap(~ by) + 
-        geom_errorbarh(aes_(xmin = quote(BMD.lower), xmax = quote(BMD.upper)), col = CI.col, 
+        geom_errorbarh(aes(xmin = .data$BMD.lower, xmax = .data$BMD.upper), col = CI.col, 
               alpha = 0.5, height = 0) + geom_point() + xlim(0, BMDlimmax)
       
     }
-  }  else
+  } else
   { # global plot of BMDs
     d$ECDF <- (rank(d$BMD, ties.method = "first") - 0.5) / nplotted
     if (!define.xlim)
     {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD), y = quote(ECDF))) + 
-        geom_errorbarh(aes_(xmin = quote(BMD.lower), xmax = quote(BMD.upper)), col = CI.col, 
+      g <- ggplot(data = d, mapping = aes(x = .data$BMD, y = .data$ECDF)) + 
+        geom_errorbarh(aes(xmin = .data$BMD.lower, xmax = .data$BMD.upper), col = CI.col, 
                        alpha = 0.5,  height = 0) + geom_point() 
     } else
     {
-      g <- ggplot(data = d, mapping = aes_(x = quote(BMD), y = quote(ECDF))) + 
-        geom_errorbarh(aes_(xmin = quote(BMD.lower), xmax = quote(BMD.upper)), col = CI.col, 
+      g <- ggplot(data = d, mapping = aes(x = .data$BMD, y = .data$ECDF)) + 
+        geom_errorbarh(aes(xmin = .data$BMD.lower, xmax = .data$BMD.upper), col = CI.col, 
                        alpha = 0.5,  height = 0) + geom_point() + xlim(0, BMDlimmax)
     }
-  } 
+  }
+  if (BMD_log_transfo)
+  {
+    g <- g + scale_x_log10()
+  }
+  
   return(g)
 }
 

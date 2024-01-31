@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.width = 7, 
                       fig.height = 5)
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  # Installation of required shiny packages
 #  install.packages(c("shiny", "shinyBS", "shinycssloaders", "shinyjs", "shinyWidgets", "sortable"))
 #  
@@ -77,9 +77,9 @@ plot(o.metabolo, col = "green")
 anchoringfilename <- system.file("extdata", "apical_anchoring.txt", package = "DRomics")
 # anchoringfilename <- "yourchosenname.txt" # for a local file
 
-## ---- fig.width = 7, fig.height = 3-------------------------------------------
+## ----fig.width = 7, fig.height = 3--------------------------------------------
 (o.anchoring <- continuousanchoringdata(anchoringfilename, backgrounddose = 0.1))
-plot(o.anchoring)
+plot(o.anchoring) + theme_bw()
 
 ## -----------------------------------------------------------------------------
 datafilename <- system.file("extdata", "insitu_RNAseq_sample.txt", package="DRomics")
@@ -106,9 +106,9 @@ data4DRomics <- formatdata4DRomics(signalmatrix = zebraf$counts,
 (o <- RNAseqdata(data4DRomics))
 
 # PCA plot to visualize the batch effect
-PCAdataplot(o, batch = zebraf$batch)
+PCAdataplot(o, batch = zebraf$batch) + theme_bw()
 
-## ---- results = "hide", message = FALSE---------------------------------------
+## ----results = "hide", message = FALSE----------------------------------------
 # Batch effect correction using ComBat_seq{sva}
 require(sva)
 BECcounts <- ComBat_seq(as.matrix(o$raw.counts), 
@@ -122,10 +122,23 @@ BECdata4DRomics <- formatdata4DRomics(signalmatrix = BECcounts,
 o.BEC <- RNAseqdata(BECdata4DRomics)
 
 # PCA plot after batch effect correction
-PCAdataplot(o.BEC, batch = zebraf$batch)
+PCAdataplot(o.BEC, batch = zebraf$batch) + theme_bw()
 
 ## -----------------------------------------------------------------------------
 (s_quad <- itemselect(o.microarray, select.method = "quadratic", FDR = 0.01))
+
+## ----results = "hide"---------------------------------------------------------
+require(VennDiagram)
+s_lin <- itemselect(o.microarray, select.method = "linear", FDR = 0.01)
+index_quad <- s_quad$selectindex
+index_lin <- s_lin$selectindex
+plot(c(0,0), c(1,1), type = "n", xaxt = "n", yaxt = "n", bty = "n", xlab = "", ylab = "")
+draw.pairwise.venn(area1 = length(index_quad), area2 = length(index_lin), 
+                   cross.area = length(which(index_quad %in% index_lin)), 
+                   category = c("quadratic trend test", "linear trend test"),
+                   cat.col=c("cyan3", "darkorange1"), col=c("black", "black"), 
+                   fill = c("cyan3", "darkorange1"), lty = "blank", cat.pos = c(1,11))
+
 
 ## -----------------------------------------------------------------------------
 (f <- drcfit(s_quad, progressbar = FALSE))
@@ -140,10 +153,10 @@ plot(f)
 targetitems <- c("88.1", "1", "3", "15")
 targetplot(targetitems, f = f)
 
-## ---- fig.width = 7, fig.height = 5-------------------------------------------
+## ----fig.width = 7, fig.height = 5--------------------------------------------
 plot(f, plot.type = "dose_residuals")
 
-## ---- echo = FALSE, results = "hide", fig.height=8, fig.width = 8-------------
+## ----echo = FALSE, results = "hide", fig.height=8, fig.width = 8--------------
 par(mfrow = c(4,4), mar = c(0,0,0,0), xaxt = "n", yaxt = "n")
 x <- seq(0,10, length.out = 50)
 # linear
@@ -190,7 +203,7 @@ plot(x, DRomics:::fLGauss5p(x, b = 0.5, c = 1, d = 3, e = 20, f = -4), type = "l
 legend("topright", legend = "log-Gauss-probit, c < d, f < 0", bty = "n")
 
 
-## ---- echo = FALSE,  fig.height = 4, fig.width = 7, results = "hide", out.width="80%"----
+## ----echo = FALSE,  fig.height = 4, fig.width = 7, results = "hide", out.width="80%"----
 par(mar = c(0.1, 0.1, 0.1, 0.1))
 datafilename <- system.file("extdata", "apical_anchoring.txt", package = "DRomics")
 o_ls <- continuousanchoringdata(datafilename, check = TRUE, backgrounddose = 0.1)
@@ -232,14 +245,14 @@ sapply(1:7, tracenormale)
 head(r$res)
 
 ## -----------------------------------------------------------------------------
-plot(r, BMDtype = "zSD", plottype = "ecdf") 
+plot(r, BMDtype = "zSD", plottype = "ecdf") + theme_bw() 
 
 ## -----------------------------------------------------------------------------
 bmdplotwithgradient(r$res, BMDtype = "zSD",
                     facetby = "trend", 
                     shapeby = "model",
                     line.size = 1.2,
-                    scaling = TRUE) + labs(shape = "model")
+                    scaling = TRUE) 
 
 ## -----------------------------------------------------------------------------
 (b <- bmdboot(r, niter = 50, progressbar = FALSE))
@@ -247,10 +260,45 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
 ## -----------------------------------------------------------------------------
 head(b$res)
 
+## ----fig.height = 3-----------------------------------------------------------
+# Plot of BMDs with no filtering
+subres <- bmdfilter(b$res, BMDfilter = "none")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with defined BMD point estimate
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "definedBMD")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with defined BMD point estimate and CI bounds
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "definedCI")
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
+# Plot of items with finite BMD point estimate and CI bounds
+subres <- bmdfilter(b$res, BMDtype = "xfold", BMDfilter = "finiteCI") 
+bmdplot(subres, BMDtype = "xfold", point.size = 2, point.alpha = 0.4, 
+        add.CI = TRUE, line.size = 0.4) + theme_bw()
+
 ## -----------------------------------------------------------------------------
 # If you do not want to add the confidence intervals just replace b
 # the output of bmdboot() by r the output of bmdcalc()
 plot(f, BMDoutput = b) 
+
+## -----------------------------------------------------------------------------
+tested.doses <- unique(f$omicdata$dose)
+g <- curvesplot(r$res, addBMD = TRUE, xmax = max(tested.doses), colorby = "trend",
+           line.size = 0.8, line.alpha = 0.3, point.size = 2, point.alpha = 0.6) +
+  geom_vline(xintercept = tested.doses, linetype = 2) + theme_bw()
+print(g)
+
+## ----eval = FALSE-------------------------------------------------------------
+#  if (require(plotly))
+#  {
+#    ggplotly(g)
+#  }
+#  
 
 ## -----------------------------------------------------------------------------
 str(b$res)
@@ -282,9 +330,9 @@ head(extendedres)
 ## -----------------------------------------------------------------------------
 bmdplot(extendedres, BMDtype = "zSD", add.CI = TRUE, 
                     facetby = "path_class", 
-                    colorby = "trend") + labs(col = "trend")
+                    colorby = "trend") + theme_bw()
 
-## ---- eval = FALSE------------------------------------------------------------
+## ----eval = FALSE-------------------------------------------------------------
 #  ecdfplotwithCI(variable = extendedres$BMD.zSD,
 #                 CI.lower = extendedres$BMD.zSD.lower,
 #                 CI.upper = extendedres$BMD.zSD.upper,
@@ -295,7 +343,7 @@ bmdplot(extendedres, BMDtype = "zSD", add.CI = TRUE,
 bmdplotwithgradient(extendedres, BMDtype = "zSD",
                     scaling = TRUE, 
                     facetby = "path_class", 
-                    shapeby = "trend") + labs(shape = "trend")
+                    shapeby = "trend") 
 
 ## -----------------------------------------------------------------------------
 extendedres_lipid <- extendedres[extendedres$path_class == "Lipid metabolism",] 
@@ -311,23 +359,41 @@ bmdplotwithgradient(extendedres_lipid, BMDtype = "zSD",
 
 ## -----------------------------------------------------------------------------
 sensitivityplot(extendedres, BMDtype = "zSD",
-                    group = "path_class",
-                 BMDsummary = "first.quartile") 
+                group = "path_class",
+                BMDsummary = "first.quartile") + theme_bw()
 
 ## -----------------------------------------------------------------------------
-trendplot(extendedres, group = "path_class") 
+sensitivityplot(extendedres, BMDtype = "zSD",
+                group = "path_class",
+                BMDsummary = "median.and.IQR") + theme_bw()
+
+## -----------------------------------------------------------------------------
+psens <- sensitivityplot(extendedres, BMDtype = "zSD",
+                         group = "path_class",
+                         BMDsummary = "first.quartile")
+
+psens + 
+  theme_bw() +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  geom_text(aes(label = paste("   ", psens$data$groupby, "   ")), 
+            size = 3, hjust = "inward")
+
+## -----------------------------------------------------------------------------
+trendplot(extendedres, group = "path_class") + theme_bw()
 
 ## -----------------------------------------------------------------------------
 # Plot of all the scaled dose-reponse curves split by path class
-curvesplot(extendedres, facetby = "path_class", scaling = TRUE, npoints = 100, line.size = 1,
-           colorby = "trend", xmin = 0, xmax = 6.5) + labs(col = "trend")
+curvesplot(extendedres, facetby = "path_class", scaling = TRUE, npoints = 100, 
+           colorby = "trend", xmin = 0, xmax = 6.5, 
+           addBMD = TRUE) + theme_bw()
 
 ## -----------------------------------------------------------------------------
 # Plot of the unscaled dose-reponses for one chosen group, split by metabolite
 LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
-curvesplot(LMres, facetby = "id", npoints = 100, line.size = 1,
+curvesplot(LMres, facetby = "id", npoints = 100, 
+           point.size = 1.5, line.size = 1,
            colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "trend")
+           xmin = 0, xmax = 6.5) + theme_bw() 
 
 ## -----------------------------------------------------------------------------
 # 1. Import the data frame with DRomics results to be used
@@ -365,22 +431,21 @@ barplot(t(t.pathways), beside = TRUE, horiz = TRUE,
 par(original.par)
 
 ## -----------------------------------------------------------------------------
-if (require(ggplot2))
-{
-   ggplot(extendedres, aes(x = BMD.zSD, color = explevel)) +
-      stat_ecdf(geom = "step") + ylab("ECDF")
-   
-}
+unique.items <- unique(extendedres$id)
+ggplot(extendedres[match(unique.items, extendedres$id), ], aes(x = BMD.zSD, color = explevel)) +
+      stat_ecdf(geom = "step") + ylab("ECDF") + theme_bw()
 
 ## -----------------------------------------------------------------------------
-# BMD ECDF plot split by molecular level
-bmdplot(extendedres, BMDtype = "zSD", 
-                    facetby = "explevel") 
+# BMD ECDF plot split by molecular level, after removing items redundancy
+bmdplot(extendedres[match(unique.items, extendedres$id), ], BMDtype = "zSD", 
+                    facetby = "explevel", point.alpha = 0.4) + theme_bw()
 
 # BMD ECDF plot colored by molecular level and split by path class
 bmdplot(extendedres, BMDtype = "zSD", 
                     facetby = "path_class", 
-                    colorby = "explevel") + labs(col = "molecular level")
+                    colorby = "explevel",
+                    point.alpha = 0.4) + 
+              labs(col = "molecular level") + theme_bw()
 
 ## -----------------------------------------------------------------------------
 # Preliminary optional alphabetic ordering of path_class groups
@@ -388,12 +453,13 @@ extendedres$path_class <- factor(extendedres$path_class,
                 levels = sort(levels(extendedres$path_class), decreasing = TRUE))
 
 # Trend plot
-trendplot(extendedres, group = "path_class", facetby = "explevel") 
+trendplot(extendedres, group = "path_class", facetby = "explevel") +
+  theme_bw()
 
 ## -----------------------------------------------------------------------------
 sensitivityplot(extendedres, BMDtype = "zSD",
                 group = "path_class", colorby = "explevel",
-                BMDsummary = "first.quartile") 
+                BMDsummary = "first.quartile") + theme_bw()
 
 ## -----------------------------------------------------------------------------
 selectedres <- selectgroups(extendedres, 
@@ -408,7 +474,7 @@ selectedres <- selectgroups(extendedres,
 # BMDplot on this selection
 bmdplot(selectedres, BMDtype = "zSD", add.CI = TRUE,
                     facetby = "path_class", facetby2 = "explevel",
-                    colorby = "trend") + labs(col = "trend")
+                    colorby = "trend") + theme_bw()
 
 ## -----------------------------------------------------------------------------
 # Manual selection of groups on which to focus
@@ -422,15 +488,16 @@ bmdplotwithgradient(selectedres2, BMDtype = "zSD", scaling = TRUE,
 
 ## -----------------------------------------------------------------------------
 # Plot of the unscaled dose-response curves for the "lipid metabolism" path class
+# using transparency to get an idea of density of curves with the shame shape
 LMres <- extendedres[extendedres$path_class == "Lipid metabolism", ]
-curvesplot(LMres, facetby = "explevel", free.y.scales = TRUE, npoints = 100, line.size = 1,
-           colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "DR_trend")
+curvesplot(LMres, facetby = "explevel", free.y.scales = TRUE, npoints = 100, 
+           addBMD = TRUE, line.alpha = 0.4, line.size = 1, colorby = "trend",
+           xmin = 0, xmax = 6.5) + labs(col = "DR trend") + theme_bw()
 
 # Plot of the scaled dose-response curves for previously chosen path classes
 curvesplot(selectedres2, scaling = TRUE,
            facetby = "path_class", facetby2 = "explevel",
-           npoints = 100, line.size = 1,
+           addBMD = TRUE, npoints = 100, line.size = 1, line.alpha = 0.4,
            colorby = "trend",
-           xmin = 0, xmax = 6.5) + labs(col = "DR_trend")
+           xmin = 0, xmax = 6.5) + labs(col = "DR trend") + theme_bw()
 

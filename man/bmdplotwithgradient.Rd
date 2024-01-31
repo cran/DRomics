@@ -12,14 +12,14 @@ on the BMD ECDF plot, in addition to the BMD ordered values. This plot is of int
 
 \usage{
 bmdplotwithgradient(extendedres, BMDtype = c("zSD", "xfold"),
-                                   xmin, xmax, y0shift = TRUE, scaling = FALSE,
+                                   xmin, xmax, y0shift = TRUE, scaling = TRUE,
                                    facetby, facetby2, 
                                    shapeby, npoints = 50, 
                                    line.size, point.size = 1,
                                    ncol4faceting, limits4colgradient,
                                    lowercol = "darkblue", uppercol = "darkred",
                                    add.label, label.size = 2,
-                                   BMD_log_transfo = FALSE)
+                                   BMD_log_transfo = TRUE)
 }
 
 \arguments{
@@ -43,7 +43,7 @@ the parameters (columns \code{b}, \code{c}, \code{d}, \code{e}, \code{f}).}
 \item{y0shift}{If \code{TRUE} (default choice) for each item the signal is shifted
 to have the theoretical signal at the control at 0.}
 
-\item{scaling}{If \code{TRUE} for each item the signal is shifted
+\item{scaling}{If \code{TRUE}, default choice, for each item the signal is shifted
 to have the theoretical signal at the control at 0 and scaled by dividing by 
  the maximal absolute signal change (up or down) from the signal at the control
  \code{maxychange}.}
@@ -81,7 +81,7 @@ to have the theoretical signal at the control at 0 and scaled by dividing by
 
 \item{label.size}{Size of labels if add.label is TRUE.}
 
-\item{BMD_log_transfo}{If TRUE a log transformation of the BMD is used in the plot. 
+\item{BMD_log_transfo}{If TRUE, the default option, a log transformation of the BMD is used in the plot. 
   This option cannot be used with a null value of xmin in input.}
 
 
@@ -121,10 +121,8 @@ Marie-Laure Delignette-Muller
 \examples{
 
 # (1) 
-# A toy example on a very small subsample of a microarray data set. 
-#
-datafilename <- system.file("extdata", "transcripto_very_small_sample.txt", 
-package="DRomics")
+# A toy example on a very small subsample of a microarray data set
+datafilename <- system.file("extdata", "transcripto_very_small_sample.txt", package="DRomics")
 
 o <- microarraydata(datafilename, check = TRUE, norm.method = "cyclicloess")
 s_quad <- itemselect(o, select.method = "quadratic", FDR = 0.01)
@@ -133,13 +131,14 @@ r <- bmdcalc(f)
 
 # Plot of all the BMD values with color dose-response gradient 
 #
-bmdplotwithgradient(r$res, BMDtype = "zSD") 
+bmdplotwithgradient(r$res, BMDtype = "zSD")  
+
 
 \donttest{
 
-# Same plot with signal scaling
+# Same plot without signal scaling
 # 
-bmdplotwithgradient(r$res, BMDtype = "zSD", scaling = TRUE) 
+bmdplotwithgradient(r$res, BMDtype = "zSD", scaling = FALSE) 
 
 # Plot of all the BMD values with color dose-response gradient 
 # with definition of xmax from the maximal tested dose
@@ -151,10 +150,10 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
 bmdplotwithgradient(r$res, BMDtype = "zSD",
                     xmax = max(f$omicdata$dose), add.label = TRUE) 
 
-# The same plot in log scale (we have to define xmin in this case) 
+# The same plot in raw scale (we can fix xmin at 0 in this case) 
 #
-bmdplotwithgradient(r$res, BMDtype = "zSD",
-                    BMD_log_transfo = TRUE) 
+bmdplotwithgradient(r$res, BMDtype = "zSD", xmin = 0,
+                    BMD_log_transfo = FALSE) 
 
 # The same plot in log scale with defining xmin and xmax at a chosen values 
 #
@@ -181,8 +180,8 @@ bmdplotwithgradient(r$res, BMDtype = "zSD",
 if (require(ggplot2)) bmdplotwithgradient(r$res, BMDtype = "zSD",
                       facetby = "trend", shapeby = "model") + 
                       labs(col = "signal value", shape = "model") +
-                      guides(colour = guide_colourbar(order = 2),
-                      shape = guide_legend(order = 1))
+                      guides(colour = guide_colourbar(order = 1),
+                      shape = guide_legend(order = 2))
                       
 # (2)
 # Plot of BMD values with color dose-response gradient
@@ -218,10 +217,10 @@ bmdplotwithgradient(extendedres, BMDtype = "zSD",
                      xmax = 7.76, # maximal tested dose in those data
                        shapeby = "trend") 
 
-### (2.a) BMDplot with gradient by pathway with scaling
+### (2.a) BMDplot with gradient by pathway without scaling
 bmdplotwithgradient(extendedres, BMDtype = "zSD",
                      facetby = "path_class", xmax = 7.76,
-                       shapeby = "trend", scaling = TRUE) 
+                       shapeby = "trend", scaling = FALSE) 
 
 
 # (2.b) BMDplot with gradient by pathway
@@ -260,9 +259,9 @@ datafilename <- system.file("extdata", "transcripto_sample.txt", package="DRomic
 bmdplotwithgradient(r$res, BMDtype = "zSD",
                       facetby = "trend", 
                       shapeby = "model") 
-# with scaling
+# without scaling
 bmdplotwithgradient(r$res, BMDtype = "zSD",
-                      scaling = TRUE, facetby = "trend", 
+                      scaling = FALSE, facetby = "trend", 
                       shapeby = "model") 
 }
 

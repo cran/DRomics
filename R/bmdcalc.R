@@ -7,8 +7,7 @@ calcBMD <- function(y0, delta, xext, yext, dosemin, dosemax, ydosemax, func,
     func4uniroot <- func_xinlog
     firstinterval <- c(log(minBMD), log(xext)) 
     secondinterval <- c(log(max(xext, minBMD)), log(dosemax))
-  }
-  else
+  } else
   {
     workwithxinlog <- FALSE
     func4uniroot <- func
@@ -31,7 +30,7 @@ calcBMD <- function(y0, delta, xext, yext, dosemin, dosemax, ydosemax, func,
         finalroot <- workwithxinlog * log(minBMD) + (1 - workwithxinlog) * minBMD
       } else
       { # then we seek the BMR above y0 
-        finalroot <- uniroot(func4uniroot, interval=firstinterval, b=b, c=c, 
+        finalroot <- stats::uniroot(func4uniroot, interval=firstinterval, b=b, c=c, 
                              d=d, e=e, g=g, threshold=threshold)$root
       }
     } else # BMR may be in the second phase 
@@ -46,7 +45,7 @@ calcBMD <- function(y0, delta, xext, yext, dosemin, dosemax, ydosemax, func,
       {
         if(c < y0 & threshold > ydosemax)
         {  # then we seek the BMR below y0 (possible only if c<y0) 
-          finalroot <- uniroot(func4uniroot, interval=secondinterval, b=b, c=c, 
+          finalroot <- stats::uniroot(func4uniroot, interval=secondinterval, b=b, c=c, 
                                d=d, e=e, g=g, threshold=threshold)$root
         }
       }
@@ -66,11 +65,10 @@ calcBMD <- function(y0, delta, xext, yext, dosemin, dosemax, ydosemax, func,
         finalroot <- workwithxinlog * log(minBMD) + (1 - workwithxinlog) * minBMD
       } else
       {
-        finalroot <- uniroot(func4uniroot, interval=firstinterval, b=b, c=c, 
+        finalroot <- stats::uniroot(func4uniroot, interval=firstinterval, b=b, c=c, 
                              d=d, e=e, g=g, threshold=threshold)$root
       }  
-    }
-    else  # BMR may be in the second phase
+    } else  # BMR may be in the second phase
     {
       threshold <- y0 + delta
       funcatminBMD <- 
@@ -82,7 +80,7 @@ calcBMD <- function(y0, delta, xext, yext, dosemin, dosemax, ydosemax, func,
       {
         if(c > y0 & threshold < ydosemax)
         {  # then we seek the BMR above y0 (possible only if c > y0) 
-          finalroot <- uniroot(func4uniroot, interval=secondinterval, b=b, c=c, 
+          finalroot <- stats::uniroot(func4uniroot, interval=secondinterval, b=b, c=c, 
                                d=d, e=e, g=g, threshold=threshold)$root
         }
       }
@@ -109,15 +107,17 @@ bmdcalc <- function(f, z = 1, x = 10, minBMD, ratio2switchinlog = 100)
   dosemax <- max(f$omicdata$dose)
   dosemin <- min(f$omicdata$dose[f$omicdata$dose != 0])
   
-  if (missing(minBMD)) minBMD <- dosemin / 100  else# could be changed
-  if (minBMD > dosemin)
+  if (missing(minBMD)) {minBMD <- dosemin / 100}  else# could be changed
+  {
+    if (minBMD > dosemin)
     { 
       warning("You can fix minBMD only to a value smaller than the minimal non null tested dose.")
       minBMD <- dosemin / 100
     }
+  }
   
   if (minBMD <= 0)
-    stop("minBMD should be a stricly positive value.")
+  {stop("minBMD should be a stricly positive value.")}
 
   dcalc <- data.frame(xextrem = dfitall$xextrem, 
                       yextrem = rep(NA,nselect), 
@@ -270,7 +270,9 @@ print.bmdcalc <- function(x, ...)
 plot.bmdcalc <- function(x, BMDtype = c("zSD", "xfold"), 
                          plottype = c("ecdf", "hist", "density"), 
                          by = c("none", "trend", "model", "typology"), 
-                         hist.bins = 30, ...) 
+                         hist.bins = 30,
+                         BMD_log_transfo = TRUE, 
+                         ...) 
 {
   if (!inherits(x, "bmdcalc"))
     stop("Use only with 'bmdcalc' objects.")
@@ -297,23 +299,32 @@ plot.bmdcalc <- function(x, BMDtype = c("zSD", "xfold"),
   
   if (plottype == "hist") 
   {
-    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
+    g <- ggplot(data = d, mapping = aes(x = .data$BMD)) +
         geom_histogram(bins = hist.bins) 
   } else
   if (plottype == "density") 
   {
-    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) + geom_density(fill = I("grey"))
+    g <- ggplot(data = d, mapping = aes(x = .data$BMD)) + geom_density(fill = I("grey"))
   } else
   if (plottype == "ecdf") 
   {
-    g <- ggplot(data = d, mapping = aes_(x = quote(BMD))) +
+    g <- ggplot(data = d, mapping = aes(x = .data$BMD)) +
             stat_ecdf(geom = "step") + ylab("ECDF")
   }
   
-  if (by == "trend")  g <- g + facet_wrap(~ trend) else
-    if (by == "model") g <- g + facet_wrap(~ model) else
-      if (by == "typology") g <- g + facet_wrap(~ typology)
-    
+  if (by == "trend")  {g <- g + facet_wrap(~ trend)} else
+  {
+    if (by == "model") {g <- g + facet_wrap(~ model)} else
+    {
+      if (by == "typology") {g <- g + facet_wrap(~ typology)}
+    }
+  }
+  
+  if (BMD_log_transfo)
+  {
+    g <- g + scale_x_log10()
+  }
+  
   return(g)
 }
 

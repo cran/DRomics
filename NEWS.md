@@ -2,6 +2,31 @@
 
 NEW FEATURES
 
+- Put the argument dose_log_transfo by default at TRUE in functions plot.drcfit(), plotfit2pdf(), targetplot() and BMD_log_transfo at TRUE in functions bmdplot(), bmdplotwithgradient() and sensitivityplot().
+- Add of the argument BMD_log_transfo by default at TRUE in functions plot.bmdcalc() and plot.bmdboot().
+- Put the argument scaling by default at TRUE in curvesplot() and bmdplotwithgradient().
+- Add of xlab and ylab to plots from curvesplot() (signal or scaled signal for y-axis) and change the color lab in "scaled signal" in plots from bmdplotwithgradient() when the signal is scaled.
+- Add the possibility (new argument addBMD of curvesplot()) to add points at BMD-BMR values on curvesplots
+and put it by default at TRUE.
+- Add the Peer Community Journal citation.
+- Add of the function bmdfilter() proposing filters to retain
+only the items associated to the best estimated BMD values in DRomics workflow output.
+- Add of arguments line.size, line.alpha and point.alpha in sensitivityplot() and in bmdplot()
+- Add a free y scale for plots of residuals, to make them readable
+even for anchoring data with endpoints of very different orders of magnitude.
+
+BUG FIXES
+
+- Fix a bug that appeared very occasionally in the bootstrap procedure (error in bmdboot() due to fail of the call to uniroot()).
+- Define the scale of nb of items in sensitivityplot() and trendplot() to get 4 integer values from min max and rounded 0.5 and 0.75 quartiles.
+- Fix a bug in plotfit2pdf : now the items appear in the same order (by p-value
+from the selection) even when BMD values are added to the plot of fitted curves.
+- Fix a bug in drcfit that could occur for anchoring data sets with many NA values.
+
+# DRomics 2.5-0 
+
+NEW FEATURES
+
 - Add of the function selectgroups() to select most represented and/or
 most sensitive groups on which to focus for biological interpretation.
 - Add of an RNAseq data with batch effect (zebraf) with an example of use of 

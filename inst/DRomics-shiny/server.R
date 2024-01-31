@@ -53,8 +53,12 @@ server <- function(input, output, session) {
   
   output$plotOmicData <- renderPlot({
     ff <- filedata()
-    if(!"message"%in%names(ff))
-      plot(ff, range = 1e10)
+    if(!"message"%in%names(ff)) {
+      gg <- plot(ff, range = 1e10)
+      if(inTypeData() == 'continuousanchoringdata')
+        gg <- gg + ggplot2::theme_bw()
+    }
+    return(gg)
   })
 
   output$plotPCAData <- renderPlot({
@@ -62,7 +66,8 @@ server <- function(input, output, session) {
       ff <- filedata()
       PCAdataplot(ff, label = TRUE) +
         ggplot2::ggtitle("Principal Component Analysis plot of omic data") + 
-        ggplot2::theme(plot.title = element_text(face = "bold", hjust = 0.5))
+        ggplot2::theme(plot.title = ggplot2::element_text(face = "bold", hjust = 0.5)) +
+        ggplot2::theme_bw()
     }
   })
   
@@ -153,59 +158,57 @@ server <- function(input, output, session) {
   
   output$printBmdcalc <- renderPrint({
     
+    # calculate bmdcalc
     input$buttonDrcfit
     mydrcfit <- rundrcfit()
     mybmdcalc <- bmdcalc(mydrcfit, z = numZbmdcalc(), x = numXbmdcalc())
-    print(mybmdcalc)
-    cat("\n")
-    cat("\n")
-    
     mybmdcalcdigits <- head(mybmdcalc$res, 10)
     idx <- as.numeric(which(sapply(mybmdcalcdigits, function(X) is.numeric(X))))
     mybmdcalcdigits[, idx] <- signif(mybmdcalcdigits[, idx], digits = 4)
-    print(mybmdcalcdigits)
     
+    # build the plot
     myplottype <- input$plottype
-    output$plotBmdcalc <- renderPlot({
+    if(myplottype == 'ecdfcolorgradient') {
+      use.args <- rep(TRUE, 5)                                    # 5 arguments used in the bmdplotwithgradient function
+      if(input$splitby == 'none') {use.args[3] <- FALSE}          # use.args[3] = facetby
       
-      ##### ecdfcolorgradient #####
-      if(myplottype == 'ecdfcolorgradient') {
-        if(input$splitby == 'none') {
-          bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
-                              BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
-                              add.label = as.logical(input$label_ecdfgradient))
-        } else {
-          bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
-                              facetby = input$splitby,
-                              BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
-                              add.label = as.logical(input$label_ecdfgradient))
-        }
+      plot1_step4 <- do.call("bmdplotwithgradient", list(
+        extendedres = mybmdcalc$res, 
+        BMDtype = input$BMDtype, 
+        facetby = input$splitby,
+        BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
+        add.label = as.logical(input$label_ecdfgradient)
+        )[use.args])
         
         ##### ecdf #####
-      } else if (myplottype == 'ecdf') {
-        if(as.logical(input$logbmd_ecdf)) {
-          plot(mybmdcalc, BMDtype = input$BMDtype, 
-               plottype = 'ecdf', 
-               by = input$splitby, 
-               hist.bins = input$histbin) + scale_x_log10()
-        } else {
-          plot(mybmdcalc, BMDtype = input$BMDtype, 
-               plottype = 'ecdf', 
-               by = input$splitby, 
-               hist.bins = input$histbin)
-        }
+      } else if(myplottype == 'ecdf') {
+        plot1_step4 <- plot(mybmdcalc, BMDtype = input$BMDtype, 
+             plottype = 'ecdf', 
+             by = input$splitby, 
+             hist.bins = input$histbin, 
+             BMD_log_transfo = as.logical(input$logbmd_ecdf))
         
       } else {
-        plot(mybmdcalc, BMDtype = input$BMDtype, 
+        plot1_step4 <- plot(mybmdcalc, BMDtype = input$BMDtype, 
              plottype = myplottype, 
              by = input$splitby, 
              hist.bins = input$histbin)
-      }
-    })
+      }  
     
-    # activate the button
+    plot1_step4 <- plot1_step4 + ggplot2::theme_bw()
+    
+    # activate buttons
     shinyjs::enable("buttonResBmdcalc")
+    shinyjs::enable("buttonPlotBmdcalc")
+    shinyjs::enable("buttonDownloadDrcfitplotBMD")
     
+    # print the result in the interface
+    print(mybmdcalc)
+    cat("\n")
+    cat("\n")
+    print(mybmdcalcdigits)
+    
+    # to download the results file
     output$buttonResBmdcalc <- downloadHandler(
       filename = function(){
         paste0("data-", Sys.Date(), ".txt")
@@ -215,71 +218,30 @@ server <- function(input, output, session) {
       }
     )
     
-    # activate the button
-    shinyjs::enable("buttonPlotBmdcalc")
+    # to print the first plot (panel 4) in the interface
+    output$plotBmdcalc <- renderPlot({
+      plot1_step4
+    })
     
-    ## Output: plots downloading
+    ## to download the first plot (panel 4)
     output$buttonPlotBmdcalc <- downloadHandler(
       filename = function(){
         paste0("data-", Sys.Date(), ".", input$fileformat_bmdcalc)
       },
       content = function(file) {
-        
-        switch(input$fileformat_bmdcalc,
-               "pdf" = pdf(file),
-               "png" = png(file),
-               "jpeg" = jpeg(file),
-               "tiff" = tiff(file, compression = "lzw"),
-               "svg" = svg(file))
-        
-        
-        myplottype <- input$plottype
-        print(
-          
-          if(myplottype == 'ecdfcolorgradient') {
-            if(input$splitby == 'none') {
-              bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
-                                  BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
-                                  add.label = as.logical(input$label_ecdfgradient))
-            } else {
-              bmdplotwithgradient(mybmdcalc$res, BMDtype = input$BMDtype, 
-                                  facetby = input$splitby,
-                                  BMD_log_transfo = as.logical(input$logbmd_ecdfgradient),
-                                  add.label = as.logical(input$label_ecdfgradient))
-            }
-            
-          } else if(myplottype == 'ecdf') {
-            if(as.logical(input$logbmd_ecdf)) {
-              plot(mybmdcalc, BMDtype = input$BMDtype, 
-                   plottype = 'ecdf', 
-                   by = input$splitby, 
-                   hist.bins = input$histbin) + scale_x_log10()
-            } else {
-              plot(mybmdcalc, BMDtype = input$BMDtype, 
-                   plottype = 'ecdf', 
-                   by = input$splitby, 
-                   hist.bins = input$histbin)
-            }
-            
-          } else {
-            plot(mybmdcalc, BMDtype = input$BMDtype, 
-                 plottype = myplottype, 
-                 by = input$splitby, 
-                 hist.bins = input$histbin)
-            
-          })
-        dev.off()
+        ggplot2::ggsave(file, plot = plot1_step4, device = input$fileformat_bmdcalc,
+                        height = 8.5, width = 11)
       }
     )
     
-    
+    # to print the second plot (panel 4) in the interface
     output$plotDrcfitBMD <- renderPlot({
       plot(mydrcfit, plot.type = "dose_fitted",
            BMDoutput = mybmdcalc, BMDtype = input$BMDtype_plot2pdf,
            dose_log_transfo = as.logical(input$logbmd_plot2pdf))
     })
     
-    shinyjs::enable("buttonDownloadDrcfitplotBMD")
+    # to download the second plot (panel 4)
     output$buttonDownloadDrcfitplotBMD <- downloadHandler(
       filename = function(){
         "drcfitplot.pdf"
@@ -319,11 +281,16 @@ server <- function(input, output, session) {
                                      ifelse(input$typeData == 'rnaseqdata', 
                                             paste0("RNAseqdata('", input$datafile_rnaseq$name, "', backgrounddose = ", input$bgdose_rnaseq, ", check = TRUE, transfo.method = '", input$transfoMethod_rnaseq, "', round.counts = TRUE)"), 
                                             ifelse(input$typeData == 'metabolomicdata', 
-                                                   paste0("metabolomicdata('", input$datafile_metabolomic$name, "', backgrounddose = ", input$bgdose_metabolomic, ", check = TRUE)"),
+                                                   paste0("continuousomicdata('", input$datafile_metabolomic$name, "', backgrounddose = ", input$bgdose_metabolomic, ", check = TRUE)"),
                                                    paste0("continuousanchoringdata('", input$datafile_anchoring$name, "', backgrounddose = ", input$bgdose_anchoring, ", check = TRUE)")
                                                    )))),
               "print(o)",
-              "plot(o)",
+              ifelse(input$typeData == 'continuousanchoringdata', "plot(o) + theme_bw()", "plot(o)"),
+              if(input$typeData != 'continuousanchoringdata') {
+                paste0("PCAdataplot(o, label = TRUE) +
+                  ggplot2::ggtitle('Principal Component Analysis plot of omic data') + 
+                  ggplot2::theme(plot.title = ggplot2::element_text(face = 'bold', hjust = 0.5)) +
+                  ggplot2::theme_bw()")},
               "",
               "# Step 2",
               paste0("s <- itemselect(o, select.method = '", inSelectMethod(), "', FDR = ", inFDR(), ")"),
@@ -340,20 +307,19 @@ server <- function(input, output, session) {
               if(input$plottype == 'ecdfcolorgradient') {
                 if(input$splitby == 'none') {
                   paste0("bmdplotwithgradient(r$res, BMDtype = '", input$BMDtype, 
-                         ", BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), ")")
+                         "', BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), 
+                         ")")
                 } else {
                   paste0("bmdplotwithgradient(r$res, BMDtype = '", input$BMDtype, 
-                         ", BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), 
+                         "', BMD_log_transfo = ", as.logical(input$logbmd_ecdfgradient), ", add.label = ", as.logical(input$label_ecdfgradient), 
                          ", facetby = '", input$splitby, "')")
                 }
               } else if(input$plottype == 'ecdf') {
-                if(as.logical(input$logbmd_ecdf)) {
-                  paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = 'ecdf', by = '", input$splitby, "', hist.bins = ", input$histbin, ") + scale_x_log10()")
-                } else {
-                  paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = 'ecdf', by = '", input$splitby, "', hist.bins = ", input$histbin, ")")
-                }
+                  paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = 'ecdf', by = '", input$splitby, "', hist.bins = ", 
+                         input$histbin, ", BMD_log_transfo = ", as.logical(input$logbmd_ecdf), ") + ggplot2::theme_bw()")
               } else {
-                paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", input$histbin, ")")
+                paste0("plot(r, BMDtype = '", input$BMDtype, "', plottype = '", input$plottype, "', by = '", input$splitby, "', hist.bins = ", 
+                       input$histbin, ") + ggplot2::theme_bw()")
               },
               paste0("plot(f, plot.type = 'dose_fitted', BMDoutput = r, BMDtype = '", input$BMDtype_plot2pdf, 
                      "', dose_log_transfo = ", input$logbmd_plot2pdf, ")")
@@ -392,14 +358,19 @@ server <- function(input, output, session) {
               "# This computation time can be reduced using parallel computing",
               "# (see ?bmdboot for corresponding code)",
               "(b <- bmdboot(r, niter = 1000, progressbar = TRUE))",
-              "plot(b)",
+              paste0("plot(b, BMD_log_transfo = ", as.logical(input$logbmd_ecdf), ")"),
               "",
               "# plot the fitted dose-response with BMD",
               paste0("plot(f, plot.type = 'dose_fitted', BMDoutput = b, BMDtype = '", input$BMDtype_plot2pdf, "', dose_log_transfo = ", input$logbmd_plot2pdf, ")"),
               "",
               "# Other functions (bmdplot, bmdplotwithgradient, curvesplot, trendplot and sensitivityplot)",
               "# are available in the DRomics package to explore your results (see the vignette and the",
-              "# cheat sheet) and will soon be the subject of a second shiny application !"
+              "# cheat sheet) and in a second shiny application called DRomicsInterpreter-shiny!",
+              "",
+              "# Before the biological interpretation of results, one could retain only the items associated",
+              "# to the best estimated BMD values, using the function bmdfilter (see ?bmdfilter for a description",
+              "# of the three proposed filters)",
+              "# subres <- bmdfilter(b$res, BMDtype = 'zSD', BMDfilter = 'definedCI')"
     )
     
     output$buttonDownRCodeFurther <- downloadHandler(

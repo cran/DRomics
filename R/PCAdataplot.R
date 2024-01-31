@@ -46,14 +46,14 @@ PCAdataplot <- function(omicdata, batch, label)
     }
   } else
   {
-    if (label) add.label <- TRUE else add.label <- FALSE
+    if (label) {add.label <- TRUE} else {add.label <- FALSE}
   }
   
   # colnames(pseudologdata) <- 1:ncol(pseudologdata)
   # prcomp{stats}
   # autoplot du package ggfortify qui est un ajout de ggplot2
   # https://cran.r-project.org/web/packages/ggfortify/vignettes/plot_pca.html
-  pca.info <- prcomp(t(pseudologdata), scale. = FALSE)
+  pca.info <- stats::prcomp(t(pseudologdata), scale. = FALSE)
   if (add.label)
   {
     pca.plot <- autoplot(pca.info, 
