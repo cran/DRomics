@@ -24,7 +24,7 @@ omicdata(file, backgrounddose, check = TRUE,
   norm.method = c("cyclicloess", "quantile", "scale", "none"))
 
 \method{print}{microarraydata}(x, \dots)
-\method{plot}{microarraydata}(x, range4boxplot = 1e6, \dots)
+\method{plot}{microarraydata}(x, range4boxplot = 0, \dots)
 }
 
 \arguments{
@@ -50,12 +50,12 @@ of \code{read.table(file, header = FALSE)} on a file described as above. }
 \item{check}{If TRUE the format of the input file is checked.}
 
 \item{norm.method}{If \code{"none"} no normalization is performed, else a 
-normalization is performed using the function normalizeBetweenArrays of the 
+normalization is performed using the function \code{normalizeBetweenArrays} of the 
 \code{limma} package using the specified method.}
 
 \item{x}{An object of class \code{"microarraydata"}.}
 
-\item{range4boxplot}{An argument passed to boxplot(), fixed by default at 1e6 
+\item{range4boxplot}{An argument passed to boxplot(), fixed by default at 0 
   to prevent the producing of very large plot files due to many outliers. 
   Can be put at 1.5 to obtain more classical boxplots.}
 
@@ -69,13 +69,13 @@ of data) and gives in the \code{print} information
 that should help the user to check that the coding of data is correct : the tested doses (or concentrations) 
 the number of replicates for each dose, the number of items, the identifiers 
 of the first 20 items. If the argument \code{norm.method} is not \code{"none"},
-data are normalized using the function \code{\link{normalizeBetweenArrays}} of the 
+data are normalized using the function \code{\link[limma]{normalizeBetweenArrays}} of the 
 \code{limma} package using the specified method : \code{"cyclicloess"} (default choice), 
 \code{"quantile"} or \code{"scale"}.
 }
 
 \value{ 
-   \code{microarraydata} returns an object of class "microarraydata", a list with 7 components:
+   \code{microarraydata} returns an object of class "microarraydata", a list with 9 components:
     \item{data}{ the numeric matrix of normalized responses of each item in each replicate
   (one line per item, one column per replicate)  }
 
@@ -91,6 +91,10 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
     \item{data.mean}{ the numeric matrix of mean responses of each item per dose (mean 
     of the corresponding replicates) (one line per item, one column per unique value 
     of the dose}
+    
+    \item{data.sd}{ the numeric matrix of standard deviations of the response of each 
+    item per dose (sd of the corresponding replicates, NA if no replicate) 
+    (one line per item, one column per unique value of the dose)}
 
     \item{norm.method}{The normalization method specified in input}
 
@@ -108,7 +112,7 @@ data are normalized using the function \code{\link{normalizeBetweenArrays}} of t
 
 \seealso{
     See \code{\link{read.table}} the function used to import data, 
-    \code{\link{normalizeBetweenArrays}} for details about the normalization and 
+    \code{\link[limma]{normalizeBetweenArrays}} for details about the normalization and 
     \code{\link{RNAseqdata}}, \code{\link{continuousomicdata}} and
     \code{\link{continuousanchoringdata}} for other types of data.}
 

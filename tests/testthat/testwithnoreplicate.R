@@ -1,20 +1,17 @@
-# Test DRomics on datasets without replicates and without control data
-library(DRomics)
-visualize <- FALSE # put to TRUE for a manual check of plots
-
-if (visualize)
-{
+test_that("Test DRomics on datasets without replicates and without control data", {
+  skip_on_cran()
+  
   ## test of the selection step with limma
   data(Scenedesmus_metab)
   head(Scenedesmus_metab)
   set.seed(1234)
-
+  
   # build of a dataset without 0 nor replicate
   Scenedesmus_metab2 <- Scenedesmus_metab[, c(1,14:25)]
   Scenedesmus_metab2[1, -1] <- Scenedesmus_metab2[1, -1] * runif(11, 0.9, 1.1)
   head(Scenedesmus_metab2)
   
-  (oerror <- continuousomicdata(Scenedesmus_metab2)) ## should stop with an explicite error message
+  (oerror <- try(continuousomicdata(Scenedesmus_metab2))) ## should stop with an explicite error message
   
   # build of a dataset without replicate but with at least a 0
   Scenedesmus_metab2 <- Scenedesmus_metab[, c(1,14:25)]
@@ -43,7 +40,7 @@ if (visualize)
   Zhou2 <- Zhou[, c(1, 4:15)]
   Zhou2[1, -1] <- Zhou2[1, -1] * runif(11, 0.9, 1.1)
   head(Zhou2)
-  (oerror <- RNAseqdata(Zhou2))
+  (oerror <- try(RNAseqdata(Zhou2)))
   
   # build of a dataset without replicate
   Zhou2 <- Zhou[, c(1, 4:15)]
@@ -62,4 +59,4 @@ if (visualize)
   (f2 <- drcfit(s2))
   plot(f2, dose_log_transfo = TRUE)
   
-}
+})

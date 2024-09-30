@@ -1,8 +1,6 @@
-library(DRomics)
-visualize <- FALSE # put to TRUE for a manual check of plots
-
-if(visualize) 
-{
+test_that("test the bmdplotwithgradient function", {
+  skip_on_cran()
+  
   # (1) Plot of BMD values with color dose-response gradient
   # faceted by metabolic pathway (from annotation of the selected items)
   # and shaped by dose-response trend
@@ -94,4 +92,4 @@ if(visualize)
                       shapeby = "model") 
 
 
-}
+})

@@ -21,7 +21,7 @@ RNAseqdata(file, backgrounddose, check = TRUE, transfo.method,
           transfo.blind = TRUE, round.counts = FALSE)
 
 \method{print}{RNAseqdata}(x, \dots)
-\method{plot}{RNAseqdata}(x, range4boxplot = 1e6, \dots)
+\method{plot}{RNAseqdata}(x, range4boxplot = 0, \dots)
 }
 
 \arguments{
@@ -52,8 +52,8 @@ using the
   \code{"vst"} for variance stabilizing transformation. If missing, default value
   defined at \code{"rlog"} for datasets with less than 30 samples and at \code{"vst"} if not}
 
-\item{transfo.blind}{Argument given to function \code{\link{rlog}} or \code{\link{vst}},
-  see \code{\link{rlog}} and \code{\link{vst}} for an explaination, by default
+\item{transfo.blind}{Argument given to function \code{\link[DESeq2]{rlog}} or \code{\link[DESeq2]{vst}},
+  see \code{\link[DESeq2]{rlog}} and \code{\link[DESeq2]{vst}} for an explaination, by default
   at \code{TRUE} as in the \code{DESeq2} package .}
 
 \item{round.counts}{Put it to TRUE if your counts come from Kallisto or Salmon
@@ -62,7 +62,7 @@ using the
 
 \item{x}{An object of class \code{"RNAseqdata"}.}
 
-\item{range4boxplot}{An argument passed to boxplot(), fixed by default at 1e6 
+\item{range4boxplot}{An argument passed to boxplot(), fixed by default at 0 
 to prevent the producing of very large plot files due to many outliers. 
 Can be put at 1.5 to obtain more classical boxplots.}
 
@@ -76,14 +76,14 @@ of data) and gives in the \code{print} information
 that should help the user to check that the coding of data is correct : the tested doses (or concentrations) 
 the number of replicates for each dose, the number of items, the identifiers 
 of the first 20 items. Data are normalized with respect to library size
-and tranformed using functions \code{\link{rlog}} or \code{\link{vst}} of the 
+and tranformed using functions \code{\link[DESeq2]{rlog}} or \code{\link[DESeq2]{vst}} of the 
 \code{DESeq2} package depending on the specified method : \code{"rlog"} 
 (recommended default choice) or 
 \code{"vst"}.
 }
 
 \value{ 
-   \code{RNAseqdata} returns an object of class "RNAseqdata", a list with 7 components:
+   \code{RNAseqdata} returns an object of class "RNAseqdata", a list with 9 components:
     \item{data}{ the numeric matrix of normalized and transformed
     responses of each item in each replicate
   (one line per item, one column per replicate)  }
@@ -99,7 +99,11 @@ and tranformed using functions \code{\link{rlog}} or \code{\link{vst}} of the
 
     \item{data.mean}{ the numeric matrix of mean responses of each item per dose (mean 
     of the corresponding replicates) (one line per item, one column per unique value 
-    of the dose}
+    of the dose)}
+
+    \item{data.sd}{ the numeric matrix of standard deviations of the response of each 
+    item per dose (sd of the corresponding replicates, NA if no replicate) 
+    (one line per item, one column per unique value of the dose)}
 
     \item{transfo.method}{The transformation method specified in input}
 
@@ -118,7 +122,7 @@ and tranformed using functions \code{\link{rlog}} or \code{\link{vst}} of the
 
 \seealso{
     See \code{\link{read.table}} the function used to import data,
-    \code{\link{rlog}} and \code{\link{vst}} for details about the 
+    \code{\link[DESeq2]{rlog}} and \code{\link[DESeq2]{vst}} for details about the 
     transformation methods and 
     \code{\link{microarraydata}}, \code{\link{continuousomicdata}} and
     \code{\link{continuousanchoringdata}} for other types of data.

@@ -1,10 +1,5 @@
-library(DRomics)
-visualize <- FALSE # put to TRUE for a manual check of plots
-doboot <- FALSE
-
-
-if(visualize) 
-{
+test_that("test the impact of ratio2switchinlog and minBMD", {
+  skip_on_cran()
   
   # Impact of ratio2switchinlog and minBMD on a toy example  
   #
@@ -18,9 +13,10 @@ if(visualize)
   r$res
   (r <- bmdcalc(f, ratio2switchinlog = 1))
   plot(r) 
-  (r <- bmdcalc(f, minBMD = 2))
+  r$omicdata$dose
+  (r <- bmdcalc(f, minBMD = 0.3))
   plot(r) 
-  (r <- bmdcalc(f, minBMD = 2, ratio2switchinlog = 1))
+  (r <- bmdcalc(f, minBMD = 0.3, ratio2switchinlog = 1))
   plot(r)
   
   # check of defensive prog
@@ -34,8 +30,8 @@ if(visualize)
   r$minBMD
   
   # bootstrap after forcing minBMD to a high value
-  # without anay interest, but just to test bmdboot
-  (r <- bmdcalc(f, minBMD = 2))
+  # without any interest, but just to test bmdboot
+  (r <- bmdcalc(f, minBMD = 0.3))
   (b <- bmdboot(r, niter = 100)) # with a non reasonable value for niter 
   b$res
   plot(b) # plot of BMD.zSD after removing of BMDs with infinite upper bounds
@@ -45,7 +41,7 @@ if(visualize)
   (b <- bmdboot(r, niter = 100)) # with a non reasonable value for niter 
   plot(b) # plot of BMD.zSD after removing of BMDs with infinite upper bounds
   
-
+  
   # using an RNAseq example
   # subsample
   # datafilename <- system.file("extdata", "RNAseq_sample.txt", package="DRomics")
@@ -61,11 +57,13 @@ if(visualize)
   head(f$fitres)
   
   (r <- bmdcalc(f))
+  r$omicdata$dose
   plot(r)
   (r <- bmdcalc(f, ratio2switchinlog = 1))
   plot(r) 
   (r <- bmdcalc(f, minBMD = 0.0001, ratio2switchinlog = 1))
   plot(r) 
-  (r <- bmdcalc(f, minBMD = 1))
+  (r <- bmdcalc(f, minBMD = 0.1))
   plot(r) 
 }
+)
