@@ -1,4 +1,4 @@
-1e2a9a3561334533d96fc161dfa183f3 *DESCRIPTION
+e014f53bd4f69e08aeca8d0c3be63e49 *DESCRIPTION
 70faa5b4076f0c2519fd2563dcab95c7 *NAMESPACE
 ebb427037c281a8dd787fdaacf267466 *NEWS.md
 c57ced0350c6255181b2d9ac76db9bbe *R/PCAdataplot.R
@@ -9,7 +9,7 @@ c57ced0350c6255181b2d9ac76db9bbe *R/PCAdataplot.R
 508e48692f182c1f5423c144a3adfacd *R/bmdplot.R
 70eeadcc8cca4455cdccc4eff338b389 *R/bmdplotwithgradient.R
 e5ecd9d5d4ca74f87634c341b6650179 *R/continuousanchoringdata.R
-e3787c467165578ed26b062c5d297e58 *R/curvesplot.R
+f3cfde217798533fda758cc79a1cd258 *R/curvesplot.R
 d283a792d37357f500b4a91feb627e3b *R/drcfit.R
 ee896f944b9623a6ea04e1a791fe1531 *R/ecdfplotwithCI.R
 0e88a9691e2d25600a844a0a1004426e *R/ecdfquantileplot.R
@@ -33,10 +33,10 @@ a7083365e282ff91e16067de8d9fe7bc *data/Zhou_kidney_pce.rda
 5ec7f848358a4b32876d45468ab54e1e *data/zebraf.rda
 15de595b333cbb68a2d1d81b3e1ccd0e *inst/CITATION
 87526757c57c15750974ce3f3464354c *inst/DRomics-shiny/apt.txt
-767f45daccdeeee496fe63f5bb3cf15c *inst/DRomics-shiny/global.R
+bf00e42222405f0c9908ab4e175c79de *inst/DRomics-shiny/global.R
 a50514934c0e7af49f2e1be1d3d4e3b1 *inst/DRomics-shiny/install.R
 b035102d85fbe7bc88823fc64e63b658 *inst/DRomics-shiny/rinstall.txt
-f0018decad6fd82e363b553185feda3c *inst/DRomics-shiny/server.R
+115882a3f2b7d1ce7056e1d1f82b61a4 *inst/DRomics-shiny/server.R
 b73ceb91ca8df734062a692dfd4c2268 *inst/DRomics-shiny/ui.R
 cd06f8d7444d193281ee294930266626 *inst/DRomics-shiny/www/LogoHelmholtz.jpg
 6617f3c8372540b39b2515fbeb68ef7c *inst/DRomics-shiny/www/LogoUniversiteLorraine.png
@@ -57,11 +57,11 @@ d0eaa8eab63ebb0f122e778dea11afc7 *inst/DRomics-shiny/www/informations_select_met
 86af4d2117eefc7be011d7773d384ebc *inst/DRomics-shiny/www/logodromics-dr.png
 aebd5a0e7be2e75cb995f1e5fd7d86fa *inst/DRomics-shiny/www/logodromics.png
 87526757c57c15750974ce3f3464354c *inst/DRomicsInterpreter-shiny/apt.txt
-eb64f28a8f7d364d5ba25ae2f9c77fd1 *inst/DRomicsInterpreter-shiny/global.R
+5c192e5886d9661ae0a0df7e619c7b90 *inst/DRomicsInterpreter-shiny/global.R
 af8e0de47c15e786d9af29f291680206 *inst/DRomicsInterpreter-shiny/install.R
 af8e0de47c15e786d9af29f291680206 *inst/DRomicsInterpreter-shiny/rinstall.txt
-56c5baccf12fa2bdf45578acd6778b58 *inst/DRomicsInterpreter-shiny/server.R
-8f1c4644a21a1bb63487d8da9f3fdc68 *inst/DRomicsInterpreter-shiny/ui.R
+32e8a6e0173f2f7f75ef3997b8041c3f *inst/DRomicsInterpreter-shiny/server.R
+6230996ea0b3bdad79c579089f62a0ae *inst/DRomicsInterpreter-shiny/ui.R
 6617f3c8372540b39b2515fbeb68ef7c *inst/DRomicsInterpreter-shiny/www/LogoUniversiteLorraine.png
 a3f04617be1c81b1716a9b5fa207e24b *inst/DRomicsInterpreter-shiny/www/intro.txt
 3ce0c942f02e643928c82bc4d476e055 *inst/DRomicsInterpreter-shiny/www/logoLyon1.png
@@ -71,7 +71,7 @@ aebd5a0e7be2e75cb995f1e5fd7d86fa *inst/DRomicsInterpreter-shiny/www/logodromics.
 85d4cf6a2e498c1070b0ae4ca7d1e4cb *inst/WORDLIST
 99a1b3ea7514da1951603d4510d0d0c7 *inst/doc/DRomics_vignette.R
 0652988b99e561e6a963468cd08b959c *inst/doc/DRomics_vignette.Rmd
-ef8261f3cb5a90781cd960edc84bbded *inst/doc/DRomics_vignette.html
+cd960ac760e12a56f8b37cc43376579c *inst/doc/DRomics_vignette.html
 d9dbfb59bf81c6779340a7bde70b3e3a *inst/extdata/RNAseq_sample.txt
 cd784355c3880821741952aebc2c0687 *inst/extdata/apical_anchoring.txt
 a38319c9d69bb7df7b94e19833a65439 *inst/extdata/insitu_RNAseq_sample.txt
@@ -108,7 +108,7 @@ dd4bc64457ad0398025541471a2a1ed4 *man/microarraydata.Rd
 fc59b1f4726137ca8d444593dfe8a6e3 *man/targetplot.Rd
 53c9e5b751450dd37f0522aeb73e918e *man/trendplot.Rd
 e9e0bc999b3f33fd2a087014b7f62f94 *man/zebraf.Rd
-251787cc4ae95c19e75633ea1ec697cc *tests/testthat.R
+870576651bf43eac35d9fb0b98f2017c *tests/testthat.R
 7e24fd486d11a6a32d37af9f5828eb3c *tests/testthat/testAIC.R
 62165fb73c2af4fe53451bffecb1f304 *tests/testthat/test_windows_bmdcalc.R
 2fb096810b01d4215d7dcf5a71c123d7 *tests/testthat/test_windows_drcfit.R

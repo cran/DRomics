@@ -35,23 +35,27 @@ server <- function(input, output, session) {
             wellPanel(
                 fixedRow(
                     column(1),
-                    column(4, align = "center", HTML("<font face=verdana size=3 color=#9c5c16><b>(1) Data frame from the DRomics workflow</b></font>")),
+                    column(4, align = "center", 
+                           HTML("<font face=verdana size=3 color=#9c5c16><b>(1) Data frame from the DRomics workflow &nbsp;</b></font>"),
+                           shinyBS::bsButton("helplabel1step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
+                           shinyBS::bsPopover("helplabel1step1", "", helplabel1step1, placement = "top", trigger = "hover", options = list(container = "body"))
+                           ),
                     column(4, align = "center", 
                            HTML("<font face=verdana size=3 color=#9c5c16><b>(2) Annotation data frame &nbsp;</b></font>"),
-                           shinyBS::bsButton("helplabel1step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
-                           shinyBS::bsPopover("helplabel1step1", "", helplabel1step1, placement = "top", trigger = "hover", options = list(container = "body")),
+                           shinyBS::bsButton("helplabel2step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
+                           shinyBS::bsPopover("helplabel2step1", "", helplabel2step1, placement = "top", trigger = "hover", options = list(container = "body")),
                            
                            splitLayout(cellWidths = c(277, 100), style = "margin-left:50px;padding-top:20px;",
                                        checkboxInput("sep_annotationData", label = "Only tab accepted as a column separator.", value = FALSE),
-                                       shinyBS::bsButton("helplabel3step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
-                                       shinyBS::bsPopover("helplabel3step1", "", helplabel3step1, placement = "bottom", trigger = "hover", options = list(container = "body"))
+                                       shinyBS::bsButton("helplabel4step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
+                                       shinyBS::bsPopover("helplabel4step1", "", helplabel4step1, placement = "bottom", trigger = "hover", options = list(container = "body"))
                            )
                     ),
                     
                     column(3, align = "center", 
                            HTML("<font face=verdana size=3 color=#9c5c16><b>(3) Name of the experimental level &nbsp;</b></font>"),
-                           shinyBS::bsButton("helplabel2step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
-                           shinyBS::bsPopover("helplabel2step1", "", helplabel2step1, placement = "bottom", trigger = "hover", options = NULL)
+                           shinyBS::bsButton("helplabel3step1", label = "", icon = icon("info"), size = "small", style="color:#9c5c16"),
+                           shinyBS::bsPopover("helplabel3step1", "", helplabel3step1, placement = "bottom", trigger = "hover", options = NULL)
                     )
                 ),
                 ..., width = 2, status = "primary")
@@ -81,7 +85,18 @@ server <- function(input, output, session) {
         eval(parse(text=paste0("req(input$DRomicsData", idlev, ")")))
         eval(parse(text=paste0("validateFile(input$DRomicsData", idlev, ")")))
         myexpr <- paste0("input$DRomicsData", idlev, "$datapath")
-        return(eval(parse(text = paste0("read.table(", myexpr, ", header = TRUE, stringsAsFactors = TRUE)"))))
+        dromicsDF <- NULL
+        dromicsDF <- tryCatch({
+          eval(parse(text = paste0("read.table(", myexpr, ", header = TRUE, stringsAsFactors = TRUE)")))
+          },
+          error = function(err) {
+            NULL
+          })
+
+        if(is.null(dromicsDF))
+          return()
+        else
+          return(dromicsDF)
     }
     
     # update selectizeInput according with DRomicsData
@@ -111,7 +126,7 @@ server <- function(input, output, session) {
         myexpr <- paste0("input$annotationData", idlev, "$datapath")
         sep <- if(input$sep_annotationData) "'\t'" else "''"
         validate(
-            need(try(annotationDF <- eval(parse(text = paste0("read.table(", myexpr, ", header = TRUE, stringsAsFactors = TRUE, sep = ", sep, ")")))), "Error reading the file")
+            need(try(annotationDF <- eval(parse(text = paste0("read.table(", myexpr, ", header = TRUE, stringsAsFactors = TRUE, sep = ", sep, ")")))), "Error reading the file containing annotation data.")
         )
         validate(
             need(length(colnames(annotationDF)) == 2, paste0("Your annotation data at level ", idlev," set must have exactly two columns.\nPlease update your imported data."))
@@ -143,7 +158,10 @@ server <- function(input, output, session) {
     mergeddata <- eventReactive(input$buttonRunStep1, {
         # input check
         validate(need(input$maxDoseXScale, "Please fill in the maximal dose/concentration for definition of x-scale of plots."))
-        for (i in 1:input$nbLevel) {annotationData(i)}
+        for (i in 1:input$nbLevel) {
+          annotationData(i)
+          validate(need(nrow(DRData(i)) != 0, "Error reading the file containing DRomics output."))
+        }
         myextendedmergeddata <- list()
         alllabels <- rep(NA, input$nbLevel)
         for (i in 1:input$nbLevel) {
@@ -327,6 +345,9 @@ server <- function(input, output, session) {
         return(df)
     }
     
+    my <- reactiveValues(hplot = 400)
+    output$uitrendplot <- renderUI(plotOutput("trendplot", width = "100%", height = my$hplot))
+    output$uisensitivityplot <- renderUI(plotOutput("sensitivityplot", width = "100%", height = my$hplot))
     
     output$filteredsorteddata <- renderPrint({
         
@@ -334,6 +355,8 @@ server <- function(input, output, session) {
         myextendedmergeddata <- sortextendedres$myextendedmergeddata
         mypathclasslabel <- sortextendedres$mypathclasslabel
         myextendedmergeddata4ggplot <- sortlevels4ggplot(myextendedmergeddata, mypathclasslabel)
+        
+        my$hplot <- max(400, length(table(as.vector(myextendedmergeddata[, mypathclasslabel]))) * 11)
         
         ############ sensitivity plot ############
         output$sensitivityplot <- renderPlot({
@@ -353,7 +376,7 @@ server <- function(input, output, session) {
             
             output$buttonDownloadSensitivityplot <- downloadHandler(
                 filename = function() {"sensitivityplot.pdf"},
-                content = function(file) {ggplot2::ggsave(file, plot = mysensitivityplot, device = "pdf", height = 8.5, width = 13)}
+                content = function(file) {ggplot2::ggsave(file, plot = mysensitivityplot, device = "pdf", height = my$hplot / 100, width = 13)}
             )
             
             return(mysensitivityplot)
@@ -374,7 +397,7 @@ server <- function(input, output, session) {
           
           output$buttonDownloadTrendplot <- downloadHandler(
             filename = function() {"trendplot.pdf"},
-            content = function(file) {ggplot2::ggsave(file, plot = mytrendplot, device = "pdf", height = 8.5, width = 13)}
+            content = function(file) {ggplot2::ggsave(file, plot = mytrendplot, device = "pdf", height = my$hplot / 100, width = 13)}
           )
           
           return(mytrendplot)
@@ -695,7 +718,7 @@ server <- function(input, output, session) {
         req(input$annotationData1)
         
         ##### STEP 1 #####
-        text <- c("library(DRomics)",
+        text <- c("require('DRomics')",
                   "",
                   "# Step 1",
                   "extendedres <- list()",
